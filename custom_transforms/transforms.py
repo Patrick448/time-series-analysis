@@ -37,11 +37,12 @@ class Reframer(BaseEstimator, TransformerMixin):
 
 
 class DropColumns(BaseEstimator, TransformerMixin):
-    def __init__(self, n_in=1, n_out=1, n_vars=1, columns=None):
+    def __init__(self, n_in=1, n_out=1, n_vars=1, columns=None, keep_only=None):
         self.n_in = n_in
         self.n_out = n_out
         self.columns = columns
         self.n_vars = n_vars
+        self.keep_only = keep_only
 
     def fit(self, X, y=None):
         return self
@@ -52,6 +53,9 @@ class DropColumns(BaseEstimator, TransformerMixin):
         # drop columns we don't want to predict
         output_cols_start = self.n_in * self.n_vars
         cols_to_keep = [i for i in range(output_cols_start, len(X.columns), self.n_vars)]
+        if self.keep_only is not None:
+            cols_to_keep =[cols_to_keep[self.keep_only]]
+
         cols_to_drop = [i for i in range(output_cols_start, len(X.columns)) if i not in cols_to_keep]
         #drop_cols = [i for i in range(output_cols_start, len(X.columns), self.n_vars)]
         X_transformed = X.drop(X.columns[cols_to_drop], axis=1)
