@@ -19,6 +19,7 @@ class LSTM1:
         self.rmse = None
         self.model = None
         self.rmse_by_timestep = None
+        self.history = None
 
     def run(self, data, cols, in_size, out_size, keep_only_size):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
@@ -69,6 +70,7 @@ class LSTM1:
         # fit network
         history = model.fit(train_X, train_Y, epochs=100, batch_size=70, validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False)
+        self.history = history.history
         # make a prediction
         yhat = model.predict(test_X)
         # test_X = test_X.reshape((test_X.shape[0], 16))
