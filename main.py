@@ -1,14 +1,25 @@
 import numpy as np
 
 from models.LSTM1 import LSTM1
-from scripts.load_data import load_price_df, load_weather_df, load_weather_weekly_df
 import pandas as pd
 import argparse
 
-
 # Create the parser
-arg_parser = argparse.ArgumentParser(description='Run LSTM model')
+arg_parser = argparse.ArgumentParser(description='Run LSTM model experiment')
 # Add the arguments
+
+arg_parser.add_argument('-input-file', '-if',
+                        type=str,
+                        help='path to the file containing the input data')
+
+arg_parser.add_argument('-config-file', '-cf',
+                        type=str,
+                        help='path to the JSON config file')
+
+arg_parser.add_argument('-model', '-m',
+                        type=str,
+                        help='name of the model to run')
+
 arg_parser.add_argument('-in_size', '-is',
                         type=int,
                         help='input size')
@@ -25,21 +36,23 @@ arg_parser.add_argument('-result_file','-rf',
 arg_parser.add_argument('-output-header','-oh',
                         action='store_true',
                         help='print the header to the output file with the results')
+arg_parser.add_argument('-columns','-c',
+                        type=str,
+                        help='columns to use in the model separated by comma. Ex: "column1,column2"')
 
 args = arg_parser.parse_args()
+columns = args.columns.split(',')
 
-price_df = load_price_df('processed_data/prices-2016-2024.csv')[['Alface Crespa - Roça', 'first_day_week']]
-weather_weekly_df = load_weather_weekly_df('processed_data/weather_2016_2023.csv')
-price_weather_df = pd.merge(price_df, weather_weekly_df, on='first_day_week', how='left')
-price_weather_df.index = price_df.index
+df = pd.read_csv(args.input_file, index_col=0)
 
 model = LSTM1()
 model.run(
-    price_weather_df,
-    ['Alface Crespa - Roça', 'TEMPERATURA DO PONTO DE ORVALHO (°C)'],
-    8,
-    8,
-    8)
+    df,
+    columns,
+    args.in_size,
+    args.out_size,
+    args.keep_only_size)
+
 rmse = model.rmse
 rmse_by_timestep = str(model.rmse_by_timestep['RMSE'].tolist()).strip('[]')
 loss = str(model.history['loss']).strip('[]')

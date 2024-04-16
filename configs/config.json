@@ -1,0 +1,12 @@
+{
+  "model": "V0",
+  "input_file": "price_weather_weekly_df-20216-2023.csv",
+  "input_size": 8,
+  "output_size": 8,
+  "keep_only_size": 8,
+  "result_file": "result.csv",
+  "columns": [
+    "Alface Crespa - Roça",
+    "PRECIPITAÇÃO TOTAL, HORÁRIO (mm)"
+  ]
+}

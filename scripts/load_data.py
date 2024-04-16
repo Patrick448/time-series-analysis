@@ -10,6 +10,8 @@ def load_weather_df(path):
     weather_df = pd.read_csv(path, index_col=0)
     weather_df.index = pd.to_datetime(weather_df.index, utc=True)
     weather_df.drop(columns=['x'], inplace=True)
+    weather_df.replace(-9999, np.NAN, inplace=True)
+    weather_df = weather_df.interpolate(method='linear')
 
     weather_df = weather_df[(weather_df.index >= '2016-04-22') & (weather_df.index <= '2023-12-31')]
 
