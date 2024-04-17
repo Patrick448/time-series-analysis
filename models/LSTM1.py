@@ -61,7 +61,8 @@ class LSTM1:
         print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
         model = Sequential()
-        model.add(LSTM(200, input_shape=(train_X.shape[1], train_X.shape[2])))
+        model.add(LSTM(100, input_shape=(train_X.shape[1], train_X.shape[2])))
+        #model.add(LSTM(100, return_sequences=True))
         model.add(Dropout(0.2))
         model.add(Dense(keep_only_size))
         model.compile(loss='mean_squared_error', optimizer='adam')

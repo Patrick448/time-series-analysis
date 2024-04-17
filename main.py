@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 
 from models.LSTM1 import LSTM1
@@ -41,31 +43,51 @@ arg_parser.add_argument('-columns','-c',
                         help='columns to use in the model separated by comma. Ex: "column1,column2"')
 
 args = arg_parser.parse_args()
-columns = args.columns.split(',')
 
-df = pd.read_csv(args.input_file, index_col=0)
 
+
+if args.config_file:
+    with open(args.config_file, 'r') as f:
+        config = json.load(f)
+        in_size = config['input_size']
+        out_size = config['output_size']
+        keep_only_size = config['keep_only_size']
+        columns = config['columns']
+        result_file = config['result_file']
+        input_file = config['input_file']
+else:
+    columns = args.columns.split(';')
+    in_size = args.in_size
+    out_size = args.out_size
+    keep_only_size = args.keep_only_size
+    result_file = args.result_file
+    output_header = args.output_header
+    input_file = args.input_file
+
+
+df = pd.read_csv(input_file, index_col=0)
 model = LSTM1()
+
 model.run(
     df,
     columns,
-    args.in_size,
-    args.out_size,
-    args.keep_only_size)
+    in_size,
+    out_size,
+    keep_only_size)
 
 rmse = model.rmse
-rmse_by_timestep = str(model.rmse_by_timestep['RMSE'].tolist()).strip('[]')
-loss = str(model.history['loss']).strip('[]')
-val_loss = str(model.history['val_loss']).strip('[]')
+rmse_by_timestep = str(model.rmse_by_timestep['RMSE'].tolist()).strip('[]').replace(" ", "")
+loss = str(model.history['loss']).strip('[]').replace(" ", "")
+val_loss = str(model.history['val_loss']).strip('[]').replace(" ", "")
 
 # Save the results
 csv_string = ""
 if args.output_header:
     csv_string = "in_size,out_size,keep_only_size,RMSE,RMSE_by_timestep,loss,val_loss\n"
-csv_string += f"{args.in_size},{args.out_size},{args.keep_only_size},{rmse},\"{rmse_by_timestep}\",\"{loss}\",\"{val_loss}\"\n"
+csv_string += f"{in_size},{out_size},{keep_only_size},{rmse},\"{rmse_by_timestep}\",\"{loss}\",\"{val_loss}\"\n"
 
-if args.result_file:
-    with open(args.result_file, 'a') as f:
+if result_file:
+    with open(result_file, 'a') as f:
         f.write(csv_string)
 
 print(csv_string)
