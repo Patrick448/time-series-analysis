@@ -5,7 +5,7 @@ from sklearn.pipeline import Pipeline  # pipeline making
 import keras
 from keras.layers import Dense
 from keras.models import Sequential
-from keras.layers import LSTM, Attention
+from keras.layers import LSTM, Attention, GRU
 from keras.layers import Dropout
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
@@ -70,7 +70,7 @@ class LSTM1:
 
         # fit network
         history = model.fit(train_X, train_Y, epochs=100, batch_size=70, validation_data=(validation_X, validation_Y),
-                            verbose=2, shuffle=False)
+                            verbose=2, shuffle=False, use_multiprocessing=True)
         self.history = history.history
         # make a prediction
         yhat = model.predict(test_X)
@@ -86,9 +86,15 @@ class LSTM1:
         #test['Preco_unitario'].plot(label="actual_norm")
         rmses_list = []
 
+        # todo: verificar se isso está correto
         for i in range(keep_only_size):
-            pred = yhat[:, i]  # , index=test_index[jump:len(yhat)+jump])
-            jump = in_size + i - 1
-            rmses_list.append(np.sqrt(mean_squared_error(test_series[jump:len(pred) + jump], pred)))
+            pred = yhat[:, i]
+            ref = test_Y[:, i]
+            rmses_list.append(np.sqrt(mean_squared_error(ref, pred)))
+
+       # for i in range(keep_only_size):
+           # pred = yhat[:, i]  # , index=test_index[jump:len(yhat)+jump])
+          #  jump = in_size + i - 1
+           # rmses_list.append(np.sqrt(mean_squared_error(test_series[jump:len(pred) + jump], pred)))
 
         self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])

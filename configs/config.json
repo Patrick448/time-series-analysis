@@ -6,9 +6,7 @@
   "keep_only_size": 8,
   "result_file": "result.csv",
   "columns": [
-    "Alface Crespa - Roça",
-    "Alface Lisa - Roça",
-    "Alface Americana - Roça",
-    "TEMPERATURA DO PONTO DE ORVALHO (°C)"
+    "Alface Crespa - Roça"
+
   ]
 }
