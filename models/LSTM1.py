@@ -10,21 +10,24 @@ from keras.layers import Dropout
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
 from utils.utils import input_output_split
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from keras.callbacks import EarlyStopping
 import numpy as np
 
 
 class LSTM1:
     def __init__(self):
         self.rmse = None
+        self.mae = None
         self.model = None
         self.rmse_by_timestep = None
+        self.mae_by_timestep = None
         self.history = None
 
-    def run(self, data, cols, in_size, out_size, keep_only_size):
+    def run(self, data, cols, in_size, out_size, keep_only):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
         train_index, valid_index, test_index = train.index, valid.index, test.index
-
+        keep_only_size = 1 if keep_only is not None else out_size
         # in_size = 8
         # out_size = 8
         # keep_only_size = 8
@@ -34,7 +37,7 @@ class LSTM1:
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(input_columns)
         reframer = Reframer(n_in=in_size, n_out=out_size)
-        drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars)
+        drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars, keep_only=keep_only)
 
         preprocess_pipeline = Pipeline(
             [
@@ -48,6 +51,7 @@ class LSTM1:
         preprocessed_train = preprocess_pipeline.fit_transform(train)
         preprocessed_valid = preprocess_pipeline.transform(valid)
         preprocessed_test = preprocess_pipeline.transform(test)
+
 
         train_X, train_Y = input_output_split(preprocessed_train, in_size, keep_only_size)
         validation_X, validation_Y = input_output_split(preprocessed_valid, in_size, keep_only_size)
@@ -69,15 +73,19 @@ class LSTM1:
         self.model = model
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=70, validation_data=(validation_X, validation_Y),
-                            verbose=2, shuffle=False, use_multiprocessing=True)
+        history = model.fit(train_X, train_Y, epochs=100, batch_size=70,
+                            validation_data=(validation_X, validation_Y),
+                            verbose=2, shuffle=False, use_multiprocessing=True,
+                            callbacks=[EarlyStopping(patience=0)])
         self.history = history.history
         # make a prediction
         yhat = model.predict(test_X)
         # test_X = test_X.reshape((test_X.shape[0], 16))
         # calculate RMSE
         rmse = np.sqrt(mean_squared_error(test_Y, yhat))
+        mae = mean_absolute_error(test_Y, yhat)
         self.rmse = rmse
+        self.mae = mae
         print('Test RMSE: %.3f' % rmse)
 
         normalized_test = preprocess_pipeline[:-2].transform(test)
@@ -85,12 +93,15 @@ class LSTM1:
         test_series = pd.Series(test_price, index=test_index)
         #test['Preco_unitario'].plot(label="actual_norm")
         rmses_list = []
+        mae_list = []
 
         # todo: verificar se isso está correto
         for i in range(keep_only_size):
             pred = yhat[:, i]
             ref = test_Y[:, i]
             rmses_list.append(np.sqrt(mean_squared_error(ref, pred)))
+            mae_list.append(mean_absolute_error(ref, pred))
+
 
        # for i in range(keep_only_size):
            # pred = yhat[:, i]  # , index=test_index[jump:len(yhat)+jump])
@@ -98,3 +109,4 @@ class LSTM1:
            # rmses_list.append(np.sqrt(mean_squared_error(test_series[jump:len(pred) + jump], pred)))
 
         self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])
+        self.mae_by_timestep = pd.DataFrame(mae_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAE'])
