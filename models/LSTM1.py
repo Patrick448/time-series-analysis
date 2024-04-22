@@ -10,7 +10,7 @@ from keras.layers import Dropout
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
 from utils.utils import input_output_split
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, mean_absolute_percentage_error
 from keras.callbacks import EarlyStopping
 import numpy as np
 
@@ -24,7 +24,7 @@ class LSTM1:
         self.mae_by_timestep = None
         self.history = None
 
-    def run(self, data, cols, in_size, out_size, keep_only):
+    def run(self, data, cols, in_size, out_size, keep_only, save_path=None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
         train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
@@ -65,7 +65,7 @@ class LSTM1:
         print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
         model = Sequential()
-        model.add(LSTM(100, input_shape=(train_X.shape[1], train_X.shape[2])))
+        model.add(LSTM(200, activation="relu", input_shape=(train_X.shape[1], train_X.shape[2])))
         #model.add(LSTM(100, return_sequences=True))
         model.add(Dropout(0.2))
         model.add(Dense(keep_only_size))
@@ -110,3 +110,6 @@ class LSTM1:
 
         self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])
         self.mae_by_timestep = pd.DataFrame(mae_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAE'])
+
+        if save_path:
+            model.save(save_path)

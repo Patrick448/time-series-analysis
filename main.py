@@ -1,4 +1,5 @@
 import json
+import os
 
 import numpy as np
 
@@ -42,6 +43,10 @@ arg_parser.add_argument('-columns','-c',
                         type=str,
                         help='columns to use in the model separated by comma. Ex: "column1,column2"')
 
+arg_parser.add_argument('-save-path','-sp',
+                        type=str,
+                        help='path to save the model')
+
 args = arg_parser.parse_args()
 
 
@@ -55,6 +60,8 @@ if args.config_file:
         columns = config['columns']
         result_file = config['result_file']
         input_file = config['input_file']
+        save_path = config['save_path']
+        model_name = config['model']
 else:
     columns = args.columns.split(';')
     in_size = args.in_size
@@ -63,17 +70,33 @@ else:
     result_file = args.result_file
     output_header = args.output_header
     input_file = args.input_file
+    save_path = args.save_path
+    model_name = args.model
 
 
 df = pd.read_csv(input_file, index_col=0)
 model = LSTM1()
+
+
+if save_path is not None:
+    with open(f'{save_path}/last_id.txt', 'r') as f:
+        last_id = int(f.read())
+        model_id = last_id + 1
+        f.close()
+    with open(f'{save_path}/last_id.txt', 'w') as f:
+        f.write(str(model_id))
+        f.close()
+
+    model_path = f'{save_path}/model_{model_name}.{model_id}'
+    os.mkdir(model_path)
 
 model.run(
     df,
     columns,
     in_size,
     out_size,
-    keep_only)
+    keep_only,
+    save_path=model_path)
 
 rmse = model.rmse
 mae = model.mae
@@ -85,8 +108,8 @@ val_loss = str(model.history['val_loss']).strip('[]').replace(" ", "")
 # Save the results
 csv_string = ""
 if args.output_header:
-    csv_string = "in_size,out_size,keep_only,RMSE,MAE,RMSE_by_timestep,MAE_by_timestep,loss,val_loss\n"
-csv_string += f"{in_size},{out_size},{keep_only},{rmse},{mae},\"{rmse_by_timestep}\",\"{mae_by_timestep}\",\"{loss}\",\"{val_loss}\"\n"
+    csv_string = "model,save_path,in_size,out_size,keep_only,RMSE,MAE,RMSE_by_timestep,MAE_by_timestep,loss,val_loss\n"
+csv_string += f"{model_name},{model_path},{in_size},{out_size},{keep_only},{rmse},{mae},\"{rmse_by_timestep}\",\"{mae_by_timestep}\",\"{loss}\",\"{val_loss}\"\n"
 
 if result_file:
     with open(result_file, 'a') as f:
