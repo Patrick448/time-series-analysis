@@ -43,7 +43,7 @@ arg_parser.add_argument('-columns','-c',
                         type=str,
                         help='columns to use in the model separated by comma. Ex: "column1,column2"')
 
-arg_parser.add_argument('-save-path','-sp',
+arg_parser.add_argument('-save_path','-sp',
                         type=str,
                         help='path to save the model')
 
@@ -104,12 +104,12 @@ rmse_by_timestep = str(model.rmse_by_timestep['RMSE'].tolist()).strip('[]').repl
 mae_by_timestep = str(model.mae_by_timestep['MAE'].tolist()).strip('[]').replace(" ", "")
 loss = str(model.history['loss']).strip('[]').replace(" ", "")
 val_loss = str(model.history['val_loss']).strip('[]').replace(" ", "")
-
+columns_str = "\""+','.join(columns)+"\""
 # Save the results
 csv_string = ""
 if args.output_header:
-    csv_string = "model,save_path,in_size,out_size,keep_only,RMSE,MAE,RMSE_by_timestep,MAE_by_timestep,loss,val_loss\n"
-csv_string += f"{model_name},{model_path},{in_size},{out_size},{keep_only},{rmse},{mae},\"{rmse_by_timestep}\",\"{mae_by_timestep}\",\"{loss}\",\"{val_loss}\"\n"
+    csv_string = "model,save_path,in_size,out_size,keep_only,RMSE,MAE,RMSE_by_timestep,MAE_by_timestep,loss,val_loss,columns\n"
+csv_string += f"{model_name},{model_path},{in_size},{out_size},{keep_only},{rmse},{mae},\"{rmse_by_timestep}\",\"{mae_by_timestep}\",\"{loss}\",\"{val_loss}\",{columns_str}\n"
 
 if result_file:
     with open(result_file, 'a') as f:

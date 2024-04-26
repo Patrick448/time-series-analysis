@@ -1,0 +1,8 @@
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 1 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models" -oh
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 2 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 3 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 4 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 5 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 6 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 7 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"
+python main.py -if "processed_data/price_weather_weekly_df-2016-2023.csv" -m "V0" -is 8 -os 8 -rf experiment1.csv -c "Alface Crespa - Roça;TEMPERATURA DO PONTO DE ORVALHO (°C)" -save_path "saved_models"

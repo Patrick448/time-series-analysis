@@ -73,7 +73,7 @@ class LSTM1:
         self.model = model
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=70,
+        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
                             validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False, use_multiprocessing=True,
                             callbacks=[EarlyStopping(patience=0)])
