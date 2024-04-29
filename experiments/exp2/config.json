@@ -1,0 +1,13 @@
+{
+  "model": "V0",
+  "input_file": "processed_data/price_weather_weekly_df-2016-2023.csv",
+  "input_size": 8,
+  "output_size": 8,
+  "keep_only": null,
+  "result_file": "results/result.csv",
+  "save_path": "saved_models",
+  "columns": [
+    "Alface Crespa - Roça",
+    "TEMPERATURA DO PONTO DE ORVALHO (°C)"
+  ]
+}
