@@ -10,7 +10,9 @@ from keras.layers import Dropout
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
 from utils.utils import input_output_split
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, mean_absolute_percentage_error
+from sklearn.metrics import (mean_squared_error,
+                             r2_score, mean_absolute_error,
+                             mean_absolute_percentage_error)
 from keras.callbacks import EarlyStopping
 import numpy as np
 
@@ -19,9 +21,13 @@ class LSTM1:
     def __init__(self):
         self.rmse = None
         self.mae = None
+        self.mape = None
+        self.mse = None
         self.model = None
         self.rmse_by_timestep = None
         self.mae_by_timestep = None
+        self.mape_by_timestep = None
+        self.mse_by_timestep = None
         self.history = None
 
     def run(self, data, cols, in_size, out_size, keep_only, save_path=None):
@@ -70,22 +76,40 @@ class LSTM1:
         model.add(Dropout(0.2))
         model.add(Dense(keep_only_size))
         model.compile(loss='mean_squared_error', optimizer='adam')
-        self.model = model
+
+
+        model_checkpoint_callback = None
+        if save_path:
+            model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+                filepath=save_path,
+                monitor='val_loss',
+                mode='min',
+                save_best_only=True)
 
         # fit network
         history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
                             validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False, use_multiprocessing=True,
-                            callbacks=[EarlyStopping(patience=0)])
+                            callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
+                                       model_checkpoint_callback])
         self.history = history.history
         # make a prediction
-        yhat = model.predict(test_X)
+
+        self.model = keras.models.load_model(save_path)
+        yhat = self.model.predict(test_X)
         # test_X = test_X.reshape((test_X.shape[0], 16))
         # calculate RMSE
+
         rmse = np.sqrt(mean_squared_error(test_Y, yhat))
         mae = mean_absolute_error(test_Y, yhat)
+        mape = mean_absolute_percentage_error(test_Y, yhat)
+        mse = mean_squared_error(test_Y, yhat)
+
+        self.mse = mse
+        self.mape = mape
         self.rmse = rmse
         self.mae = mae
+
         print('Test RMSE: %.3f' % rmse)
 
         normalized_test = preprocess_pipeline[:-2].transform(test)
@@ -94,6 +118,8 @@ class LSTM1:
         #test['Preco_unitario'].plot(label="actual_norm")
         rmses_list = []
         mae_list = []
+        mse_list = []
+        mape_list = []
 
         # todo: verificar se isso está correto
         for i in range(keep_only_size):
@@ -101,6 +127,9 @@ class LSTM1:
             ref = test_Y[:, i]
             rmses_list.append(np.sqrt(mean_squared_error(ref, pred)))
             mae_list.append(mean_absolute_error(ref, pred))
+            mse_list.append(mean_squared_error(ref, pred))
+            mape_list.append(mean_absolute_percentage_error(ref, pred))
+
 
 
        # for i in range(keep_only_size):
@@ -110,6 +139,8 @@ class LSTM1:
 
         self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])
         self.mae_by_timestep = pd.DataFrame(mae_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAE'])
+        self.mse_by_timestep = pd.DataFrame(mse_list, index=[i + 1 for i in range(keep_only_size)], columns=['MSE'])
+        self.mape_by_timestep = pd.DataFrame(mape_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAPE'])
 
-        if save_path:
-            model.save(save_path)
+        #if save_path:
+            #model.save(save_path)

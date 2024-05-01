@@ -33,23 +33,31 @@ arg_parser.add_argument('-out_size', '-os',
 arg_parser.add_argument('-keep_only', '-ko',
                         type=int,
                         help='number of timesteps to keep')
-arg_parser.add_argument('-result_file','-rf',
+arg_parser.add_argument('-result_file', '-rf',
                         type=str,
                         help='path to save the results')
-arg_parser.add_argument('-output-header','-oh',
+arg_parser.add_argument('-output-header', '-oh',
                         action='store_true',
                         help='print the header to the output file with the results')
-arg_parser.add_argument('-columns','-c',
+arg_parser.add_argument('-columns', '-c',
                         type=str,
-                        help='columns to use in the model separated by comma. Ex: "column1,column2"')
+                        help='columns to use in the model separated by semicolon. Ex: "column1;column2"')
 
-arg_parser.add_argument('-save_path','-sp',
+arg_parser.add_argument('-save_path', '-sp',
                         type=str,
                         help='path to save the model')
 
 args = arg_parser.parse_args()
 
-
+columns = None
+in_size = None
+out_size = None
+keep_only = None
+result_file = None
+output_header = None
+input_file = None
+save_path = None
+model_name = None
 
 if args.config_file:
     with open(args.config_file, 'r') as f:
@@ -62,21 +70,21 @@ if args.config_file:
         input_file = config['input_file']
         save_path = config['save_path']
         model_name = config['model']
-else:
-    columns = args.columns.split(';')
-    in_size = args.in_size
-    out_size = args.out_size
-    keep_only = args.keep_only
-    result_file = args.result_file
-    output_header = args.output_header
-    input_file = args.input_file
-    save_path = args.save_path
-    model_name = args.model
+
+
+columns = args.columns.split(';') if args.columns else columns
+in_size = args.in_size if args.in_size else in_size
+out_size = args.out_size if args.out_size else out_size
+keep_only = args.keep_only if args.keep_only else keep_only
+result_file = args.result_file if args.result_file else result_file
+output_header = args.output_header if args.output_header else output_header
+input_file = args.input_file if args.input_file else input_file
+save_path = args.save_path if args.save_path else save_path
+model_name = args.model if args.model else model_name
 
 
 df = pd.read_csv(input_file, index_col=0)
 model = LSTM1()
-
 
 if save_path is not None:
     with open(f'{save_path}/last_id.txt', 'r') as f:
@@ -100,16 +108,40 @@ model.run(
 
 rmse = model.rmse
 mae = model.mae
-rmse_by_timestep = str(model.rmse_by_timestep['RMSE'].tolist()).strip('[]').replace(" ", "")
-mae_by_timestep = str(model.mae_by_timestep['MAE'].tolist()).strip('[]').replace(" ", "")
-loss = str(model.history['loss']).strip('[]').replace(" ", "")
-val_loss = str(model.history['val_loss']).strip('[]').replace(" ", "")
-columns_str = "\""+','.join(columns)+"\""
+mse = model.mse
+mape = model.mape
+
+rmses = model.rmse_by_timestep['RMSE'].tolist()
+maes = model.mae_by_timestep['MAE'].tolist()
+mses = model.mse_by_timestep['MSE'].tolist()
+mapes = model.mape_by_timestep['MAPE'].tolist()
+
+rmse_by_timestep = "\"" + ",".join(map(str, rmses)) + "\""
+mae_by_timestep = "\"" + ",".join(map(str, maes)) + "\""
+mse_by_timestep = "\"" + ",".join(map(str, mses)) + "\""
+mape_by_timestep = "\"" + ",".join(map(str, mapes)) + "\""
+
+loss = '\"'+','.join(map(str, model.history['loss'])) + '\"'
+val_loss = '\"'+','.join(map(str, model.history['val_loss'])) + '\"'
+columns_str = "\"" + ','.join(columns) + "\""
+
+csv_columns = ['model', 'save_path', 'in_size', 'out_size', 'keep_only',
+               'RMSE', 'MAE', 'MSE', 'MAPE',
+               'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep',
+               'loss', 'val_loss', 'columns']
+
+csv_values = [model_name, model_path, in_size, out_size, keep_only,
+              rmse, mae, mse, mape,
+              rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep,
+              loss, val_loss, columns_str]
+
+
+
 # Save the results
 csv_string = ""
 if args.output_header:
-    csv_string = "model,save_path,in_size,out_size,keep_only,RMSE,MAE,RMSE_by_timestep,MAE_by_timestep,loss,val_loss,columns\n"
-csv_string += f"{model_name},{model_path},{in_size},{out_size},{keep_only},{rmse},{mae},\"{rmse_by_timestep}\",\"{mae_by_timestep}\",\"{loss}\",\"{val_loss}\",{columns_str}\n"
+    csv_string = ",".join(csv_columns) + "\n"
+csv_string += ",".join(map(str, csv_values)) + "\n"
 
 if result_file:
     with open(result_file, 'a') as f:

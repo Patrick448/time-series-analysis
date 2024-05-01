@@ -45,3 +45,5 @@ def load_price_df(path):
         days=1)
 
     return resampled_df
+
+
