@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 import pandas as pd
 
@@ -72,3 +73,11 @@ class ColumnSelector(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         return X[self.columns]
+
+
+def denormalize_with(data, original_size, scaler, column_index):
+    length = len(data)
+    new_array = np.zeros((length, original_size))
+    new_array[:, column_index] = data
+
+    return scaler.inverse_transform(new_array)[:, column_index]

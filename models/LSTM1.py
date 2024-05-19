@@ -1,3 +1,6 @@
+import os
+
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.pipeline import Pipeline  # pipeline making
 
@@ -23,14 +26,26 @@ class LSTM1:
         self.mae = None
         self.mape = None
         self.mse = None
+        self.r2 = None
         self.model = None
         self.rmse_by_timestep = None
         self.mae_by_timestep = None
         self.mape_by_timestep = None
         self.mse_by_timestep = None
+        self.r2_by_timestep = None
         self.history = None
 
-    def run(self, data, cols, in_size, out_size, keep_only, save_path=None):
+    def save_pred_ref(self, ref_pred_path, pred, ref, model_id):
+        try:
+            os.mkdir(ref_pred_path)
+        except:
+            pass
+        pd.DataFrame(pred).to_csv(f'{ref_pred_path}/pred_{model_id}.csv')
+        pd.DataFrame(ref).to_csv(f'{ref_pred_path}/ref_{model_id}.csv')
+
+
+
+    def run(self, data, cols, in_size, out_size, keep_only, save_path=None, model_id=None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
         train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
@@ -100,26 +115,42 @@ class LSTM1:
         # test_X = test_X.reshape((test_X.shape[0], 16))
         # calculate RMSE
 
+        # ----------------- DENORMALIZE
+
+        denorm_test_Y = np.copy(test_Y)
+        denorm_yhat = np.copy(yhat)
+
+        for i, col in enumerate(denorm_test_Y.T):
+            denorm_test_Y[:, i] = denormalize_with(col, len(cols), scaler, 0)
+
+        for i, col in enumerate(denorm_yhat.T):
+            denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
+
+        test_Y = denorm_test_Y
+        yhat = denorm_yhat
+
+        # -----------------
+
+        self.save_pred_ref("pred_ref", yhat, test_Y, model_id)
+
         rmse = np.sqrt(mean_squared_error(test_Y, yhat))
         mae = mean_absolute_error(test_Y, yhat)
         mape = mean_absolute_percentage_error(test_Y, yhat)
         mse = mean_squared_error(test_Y, yhat)
+        r2 = r2_score(test_Y, yhat)
 
         self.mse = mse
         self.mape = mape
         self.rmse = rmse
         self.mae = mae
+        self.r2 = r2
 
-        print('Test RMSE: %.3f' % rmse)
 
-        normalized_test = preprocess_pipeline[:-2].transform(test)
-        test_price = normalized_test[:, 0]
-        test_series = pd.Series(test_price, index=test_index)
-        #test['Preco_unitario'].plot(label="actual_norm")
         rmses_list = []
         mae_list = []
         mse_list = []
         mape_list = []
+        r2_list = []
 
         # todo: verificar se isso está correto
         for i in range(keep_only_size):
@@ -129,18 +160,11 @@ class LSTM1:
             mae_list.append(mean_absolute_error(ref, pred))
             mse_list.append(mean_squared_error(ref, pred))
             mape_list.append(mean_absolute_percentage_error(ref, pred))
-
-
-
-       # for i in range(keep_only_size):
-           # pred = yhat[:, i]  # , index=test_index[jump:len(yhat)+jump])
-          #  jump = in_size + i - 1
-           # rmses_list.append(np.sqrt(mean_squared_error(test_series[jump:len(pred) + jump], pred)))
+            r2_list.append(r2_score(ref, pred))
 
         self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])
         self.mae_by_timestep = pd.DataFrame(mae_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAE'])
         self.mse_by_timestep = pd.DataFrame(mse_list, index=[i + 1 for i in range(keep_only_size)], columns=['MSE'])
         self.mape_by_timestep = pd.DataFrame(mape_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAPE'])
+        self.r2_by_timestep = pd.DataFrame(r2_list, index=[i + 1 for i in range(keep_only_size)], columns=['R2'])
 
-        #if save_path:
-            #model.save(save_path)

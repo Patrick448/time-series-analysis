@@ -1,5 +1,6 @@
 import json
 import os
+from os.path import abspath
 
 import numpy as np
 
@@ -46,6 +47,9 @@ arg_parser.add_argument('-columns', '-c',
 arg_parser.add_argument('-save_path', '-sp',
                         type=str,
                         help='path to save the model')
+arg_parser.add_argument('-experiment_group', '-eg',
+                        type=str,
+                        help='name of the experiment group')
 
 args = arg_parser.parse_args()
 
@@ -58,19 +62,20 @@ output_header = None
 input_file = None
 save_path = None
 model_name = None
+experiment_group = None
 
 if args.config_file:
     with open(args.config_file, 'r') as f:
         config = json.load(f)
-        in_size = config['input_size']
-        out_size = config['output_size']
-        keep_only = config['keep_only']
-        columns = config['columns']
-        result_file = config['result_file']
-        input_file = config['input_file']
-        save_path = config['save_path']
-        model_name = config['model']
-
+        in_size = config.get('input_size')
+        out_size = config.get('output_size')
+        keep_only = config.get('keep_only')
+        columns = config.get('columns')
+        result_file = config.get('result_file')
+        input_file = config.get('input_file')
+        save_path = config.get('save_path')
+        model_name = config.get('model')
+        experiment_group = config.get('experiment_group')
 
 columns = args.columns.split(';') if args.columns else columns
 in_size = args.in_size if args.in_size else in_size
@@ -81,11 +86,13 @@ output_header = args.output_header if args.output_header else output_header
 input_file = args.input_file if args.input_file else input_file
 save_path = args.save_path if args.save_path else save_path
 model_name = args.model if args.model else model_name
+experiment_group = args.experiment_group if args.experiment_group else experiment_group
 
 
 df = pd.read_csv(input_file, index_col=0)
 model = LSTM1()
 
+model_id = None
 if save_path is not None:
     with open(f'{save_path}/last_id.txt', 'r') as f:
         last_id = int(f.read())
@@ -104,35 +111,39 @@ model.run(
     in_size,
     out_size,
     keep_only,
-    save_path=model_path)
+    save_path=model_path,
+    model_id=model_id)
 
 rmse = model.rmse
 mae = model.mae
 mse = model.mse
 mape = model.mape
+r2 = model.r2
 
 rmses = model.rmse_by_timestep['RMSE'].tolist()
 maes = model.mae_by_timestep['MAE'].tolist()
 mses = model.mse_by_timestep['MSE'].tolist()
 mapes = model.mape_by_timestep['MAPE'].tolist()
+r2s = model.r2_by_timestep['R2'].tolist()
 
 rmse_by_timestep = "\"" + ",".join(map(str, rmses)) + "\""
 mae_by_timestep = "\"" + ",".join(map(str, maes)) + "\""
 mse_by_timestep = "\"" + ",".join(map(str, mses)) + "\""
 mape_by_timestep = "\"" + ",".join(map(str, mapes)) + "\""
+r2_by_timestep = "\"" + ",".join(map(str, r2s)) + "\""
 
 loss = '\"'+','.join(map(str, model.history['loss'])) + '\"'
 val_loss = '\"'+','.join(map(str, model.history['val_loss'])) + '\"'
 columns_str = "\"" + ','.join(columns) + "\""
 
-csv_columns = ['model', 'save_path', 'in_size', 'out_size', 'keep_only',
-               'RMSE', 'MAE', 'MSE', 'MAPE',
-               'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep',
+csv_columns = ['experiment_group', 'model','model_id', 'save_path', 'in_size', 'out_size', 'keep_only',
+               'RMSE', 'MAE', 'MSE', 'MAPE', 'R2',
+               'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep', 'R2_by_timestep',
                'loss', 'val_loss', 'columns']
 
-csv_values = [model_name, model_path, in_size, out_size, keep_only,
-              rmse, mae, mse, mape,
-              rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep,
+csv_values = [experiment_group, model_name, model_id, abspath(model_path), in_size, out_size, keep_only,
+              rmse, mae, mse, mape, r2,
+              rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep, r2_by_timestep,
               loss, val_loss, columns_str]
 
 

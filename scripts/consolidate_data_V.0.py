@@ -41,18 +41,22 @@ def run():
         price_weather_weekly_df.drop(columns=[col], inplace=True)
         price_weather_weekly_df = price_weather_weekly_df.copy()
 
-    interest_cols = ['Alface Crespa - Roça']
-    added_shifted_cols = add_shifted_column(12, "Alface Crespa - Roça", price_weather_weekly_df)
-    interest_cols.extend(added_shifted_cols)
 
-    price_weather_weekly_df["Alface Crespa - Roça_+49"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(49)
-    price_weather_weekly_df["Alface Crespa - Roça_+50"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(50)
-    price_weather_weekly_df["Alface Crespa - Roça_+51"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(51)
-    price_weather_weekly_df["Alface Crespa - Roça_+52"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(52)
-    price_weather_weekly_df["Alface Crespa - Roça_+53"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(53)
+    #price_weather_weekly_df["Alface Crespa - Roça_+49"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(49)
+    #price_weather_weekly_df["Alface Crespa - Roça_+50"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(50)
+    #price_weather_weekly_df["Alface Crespa - Roça_+51"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(51)
+    #price_weather_weekly_df["Alface Crespa - Roça_+52"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(52)
+    #price_weather_weekly_df["Alface Crespa - Roça_+53"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(53)
+
+    for col in price_weather_weekly_df.columns:
+        for i in range(49, 53):
+            price_weather_weekly_df[f"{col}_+{i}"] = price_weather_weekly_df[col].shift(i)
+            price_weather_weekly_df = price_weather_weekly_df.copy()
+
+    added_shifted_cols = add_shifted_column(12, "Alface Crespa - Roça", price_weather_weekly_df)
 
     price_weather_weekly_df = price_weather_weekly_df[price_weather_weekly_df.index >= '2017-04-30']
-    price_weather_weekly_df.to_csv('../processed_data/price_weather_weekly_df.V0.csv')
+    price_weather_weekly_df.to_csv('../processed_data/price_weather_weekly_df.V1.csv')
 
 
 if __name__ == '__main__':
