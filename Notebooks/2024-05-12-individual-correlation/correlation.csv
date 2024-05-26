@@ -1,0 +1,74 @@
+column,correlated_to,max_correlation
+"Alface Americana - Roça","Alface Crespa - Roça",0.8648422632303855
+"Alface Crespa - Roça","Alface Crespa - Roça",1.0
+"Alface Lisa - Roça","Alface Crespa - Roça",0.9745202642013104
+"Alface Americana - Atacado","Alface Crespa - Roça",nan
+"Alface Crespa - Atacado","Alface Crespa - Roça",nan
+"PRECIPITAÇÃO TOTAL, HORÁRIO (mm)_mean","Alface Crespa - Roça",0.2680002030699267
+"PRECIPITAÇÃO TOTAL, HORÁRIO (mm)_max","Alface Crespa - Roça",0.3297219428913064
+"PRECIPITAÇÃO TOTAL, HORÁRIO (mm)_sum","Alface Crespa - Roça",0.2679156253447762
+"PRESSAO ATMOSFERICA AO NIVEL DA ESTACAO, HORARIA (mB)_mean","Alface Crespa - Roça",0.42563310153888073
+"PRESSAO ATMOSFERICA AO NIVEL DA ESTACAO, HORARIA (mB)_max","Alface Crespa - Roça",0.44494881847666573
+"PRESSAO ATMOSFERICA AO NIVEL DA ESTACAO, HORARIA (mB)_sum","Alface Crespa - Roça",0.42563310153888073
+"PRESSÃO ATMOSFERICA MAX.NA HORA ANT. (AUT) (mB)_mean","Alface Crespa - Roça",0.42449648360124237
+"PRESSÃO ATMOSFERICA MAX.NA HORA ANT. (AUT) (mB)_max","Alface Crespa - Roça",0.4394057273331333
+"PRESSÃO ATMOSFERICA MAX.NA HORA ANT. (AUT) (mB)_sum","Alface Crespa - Roça",0.42449648360124237
+"PRESSÃO ATMOSFERICA MIN. NA HORA ANT. (AUT) (mB)_mean","Alface Crespa - Roça",0.4245463351216247
+"PRESSÃO ATMOSFERICA MIN. NA HORA ANT. (AUT) (mB)_max","Alface Crespa - Roça",0.44495626582149517
+"PRESSÃO ATMOSFERICA MIN. NA HORA ANT. (AUT) (mB)_sum","Alface Crespa - Roça",0.4245463351216247
+"RADIACAO GLOBAL (Kj/m²)_mean","Alface Crespa - Roça",0.17899516413711175
+"RADIACAO GLOBAL (Kj/m²)_max","Alface Crespa - Roça",0.40771883330460157
+"RADIACAO GLOBAL (Kj/m²)_sum","Alface Crespa - Roça",0.17899516413711175
+"TEMPERATURA DO AR - BULBO SECO, HORARIA (°C)_mean","Alface Crespa - Roça",0.42163316634677217
+"TEMPERATURA DO AR - BULBO SECO, HORARIA (°C)_max","Alface Crespa - Roça",0.3543546012374439
+"TEMPERATURA DO AR - BULBO SECO, HORARIA (°C)_sum","Alface Crespa - Roça",0.42163316634677217
+"TEMPERATURA DO PONTO DE ORVALHO (°C)_mean","Alface Crespa - Roça",0.4396061197653522
+"TEMPERATURA DO PONTO DE ORVALHO (°C)_max","Alface Crespa - Roça",0.4413155799669199
+"TEMPERATURA DO PONTO DE ORVALHO (°C)_sum","Alface Crespa - Roça",0.4396061197653522
+"TEMPERATURA MÁXIMA NA HORA ANT. (AUT) (°C)_mean","Alface Crespa - Roça",0.41619080343245324
+"TEMPERATURA MÁXIMA NA HORA ANT. (AUT) (°C)_max","Alface Crespa - Roça",0.3636737422415553
+"TEMPERATURA MÁXIMA NA HORA ANT. (AUT) (°C)_sum","Alface Crespa - Roça",0.41619080343245324
+"TEMPERATURA MÍNIMA NA HORA ANT. (AUT) (°C)_mean","Alface Crespa - Roça",0.4247580265248694
+"TEMPERATURA MÍNIMA NA HORA ANT. (AUT) (°C)_max","Alface Crespa - Roça",0.34037008926591567
+"TEMPERATURA MÍNIMA NA HORA ANT. (AUT) (°C)_sum","Alface Crespa - Roça",0.4247580265248694
+"TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)_mean","Alface Crespa - Roça",0.44123480158482437
+"TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)_max","Alface Crespa - Roça",0.44580964417202107
+"TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)_sum","Alface Crespa - Roça",0.44123480158482437
+"TEMPERATURA ORVALHO MIN. NA HORA ANT. (AUT) (°C)_mean","Alface Crespa - Roça",0.4370974753101613
+"TEMPERATURA ORVALHO MIN. NA HORA ANT. (AUT) (°C)_max","Alface Crespa - Roça",0.4328949481718349
+"TEMPERATURA ORVALHO MIN. NA HORA ANT. (AUT) (°C)_sum","Alface Crespa - Roça",0.4370974753101613
+"UMIDADE REL. MAX. NA HORA ANT. (AUT) (%)_mean","Alface Crespa - Roça",0.28371781326726914
+"UMIDADE REL. MAX. NA HORA ANT. (AUT) (%)_max","Alface Crespa - Roça",0.4235540809542418
+"UMIDADE REL. MAX. NA HORA ANT. (AUT) (%)_sum","Alface Crespa - Roça",0.28371781326726914
+"UMIDADE REL. MIN. NA HORA ANT. (AUT) (%)_mean","Alface Crespa - Roça",0.25904695364872793
+"UMIDADE REL. MIN. NA HORA ANT. (AUT) (%)_max","Alface Crespa - Roça",0.43878418780034784
+"UMIDADE REL. MIN. NA HORA ANT. (AUT) (%)_sum","Alface Crespa - Roça",0.25904695364872793
+"UMIDADE RELATIVA DO AR, HORARIA (%)_mean","Alface Crespa - Roça",0.27350844948050385
+"UMIDADE RELATIVA DO AR, HORARIA (%)_max","Alface Crespa - Roça",0.414818984606339
+"UMIDADE RELATIVA DO AR, HORARIA (%)_sum","Alface Crespa - Roça",0.27350844948050385
+"VENTO, DIREÇÃO HORARIA (gr) (° (gr))_mean","Alface Crespa - Roça",0.30971323099789905
+"VENTO, DIREÇÃO HORARIA (gr) (° (gr))_max","Alface Crespa - Roça",0.2728713407004972
+"VENTO, DIREÇÃO HORARIA (gr) (° (gr))_sum","Alface Crespa - Roça",0.30971323099789905
+"VENTO, RAJADA MAXIMA (m/s)_mean","Alface Crespa - Roça",0.34352504449974325
+"VENTO, RAJADA MAXIMA (m/s)_max","Alface Crespa - Roça",0.1499283155196418
+"VENTO, RAJADA MAXIMA (m/s)_sum","Alface Crespa - Roça",0.34352504449974325
+"VENTO, VELOCIDADE HORARIA (m/s)_mean","Alface Crespa - Roça",0.3997663840895991
+"VENTO, VELOCIDADE HORARIA (m/s)_max","Alface Crespa - Roça",0.295550836114361
+"VENTO, VELOCIDADE HORARIA (m/s)_sum","Alface Crespa - Roça",0.3997663840895991
+"Alface Crespa - Roça_-1","Alface Crespa - Roça",0.9694867449037795
+"Alface Crespa - Roça_-2","Alface Crespa - Roça",0.9694703263143278
+"Alface Crespa - Roça_-3","Alface Crespa - Roça",0.9694368337735412
+"Alface Crespa - Roça_-4","Alface Crespa - Roça",0.9695103083821895
+"Alface Crespa - Roça_-5","Alface Crespa - Roça",0.9697295583555604
+"Alface Crespa - Roça_-6","Alface Crespa - Roça",0.9709063226152584
+"Alface Crespa - Roça_-7","Alface Crespa - Roça",0.971281255546671
+"Alface Crespa - Roça_-8","Alface Crespa - Roça",0.9713611380928885
+"Alface Crespa - Roça_-9","Alface Crespa - Roça",0.971374695252084
+"Alface Crespa - Roça_-10","Alface Crespa - Roça",0.971986807889652
+"Alface Crespa - Roça_-11","Alface Crespa - Roça",0.9724781594230093
+"Alface Crespa - Roça_-12","Alface Crespa - Roça",0.972569018359768
+"Alface Crespa - Roça_+49","Alface Crespa - Roça",0.41138446074519913
+"Alface Crespa - Roça_+50","Alface Crespa - Roça",0.41192177676003583
+"Alface Crespa - Roça_+51","Alface Crespa - Roça",0.40137182064973675
+"Alface Crespa - Roça_+52","Alface Crespa - Roça",0.40221039702640926
+"Alface Crespa - Roça_+53","Alface Crespa - Roça",0.40729366671137784

@@ -1,0 +1,10 @@
+column,correlated_to,max_correlation
+"Alface Americana - Roça","Alface Crespa - Roça",0.8648422632303855
+"Alface Crespa - Roça","Alface Crespa - Roça",1.0
+"Alface Lisa - Roça","Alface Crespa - Roça",0.9745202642013104
+"PRESSÃO ATMOSFERICA MIN. NA HORA ANT. (AUT) (mB)_max","Alface Crespa - Roça",0.44495626582149517
+"RADIACAO GLOBAL (Kj/m²)_max","Alface Crespa - Roça",0.40771883330460157
+"TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)_max","Alface Crespa - Roça",0.44580964417202107
+"UMIDADE REL. MIN. NA HORA ANT. (AUT) (%)_max","Alface Crespa - Roça",0.43878418780034784
+"VENTO, VELOCIDADE HORARIA (m/s)_mean",Alface Crespa - Roça,0.3997663840895991
+"PRECIPITAÇÃO TOTAL, HORÁRIO (mm)_max",Alface Crespa - Roça,0.3297219428913064

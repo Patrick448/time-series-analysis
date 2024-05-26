@@ -37,6 +37,11 @@ def run():
         price_weather_weekly_df[f'{col}_mean'] = weather_df[col].resample('W').mean()  # .rolling(window=4).mean()
         price_weather_weekly_df[f'{col}_max'] = weather_df[col].resample('W').max()  # .rolling(window=4).mean()
         price_weather_weekly_df[f'{col}_sum'] = weather_df[col].resample('W').sum()  # .rolling(window=4).mean()
+        price_weather_weekly_df[f'{col}_min'] = weather_df[col].resample('W').min()
+        price_weather_weekly_df[f'{col}_std'] = weather_df[col].resample('W').std()
+        price_weather_weekly_df[f'{col}_var'] = weather_df[col].resample('W').var()
+        price_weather_weekly_df[f'{col}_median'] = weather_df[col].resample('W').median()
+        price_weather_weekly_df[f'{col}_ma4'] = weather_df[col].rolling(window=4).mean()
 
         price_weather_weekly_df.drop(columns=[col], inplace=True)
         price_weather_weekly_df = price_weather_weekly_df.copy()
@@ -48,15 +53,24 @@ def run():
     #price_weather_weekly_df["Alface Crespa - Roça_+52"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(52)
     #price_weather_weekly_df["Alface Crespa - Roça_+53"] = price_weather_weekly_df["Alface Crespa - Roça"].shift(53)
 
+   # for col in price_weather_weekly_df.columns:
+   #     for i in range(49, 53):
+   #         price_weather_weekly_df[f"{col}_+{i}"] = price_weather_weekly_df[col].shift(i)
+    #        price_weather_weekly_df = price_weather_weekly_df.copy()
+
+    interest_points = [i for i in range(0, 62, 26)]
     for col in price_weather_weekly_df.columns:
-        for i in range(49, 53):
-            price_weather_weekly_df[f"{col}_+{i}"] = price_weather_weekly_df[col].shift(i)
-            price_weather_weekly_df = price_weather_weekly_df.copy()
+        for x in interest_points:
+            price_weather_weekly_df[f"{col}_+{x}"] = price_weather_weekly_df[col].shift(x)
+            for i in range(7, 11):
+                price_weather_weekly_df[f"{col}_+{x+i}"] = price_weather_weekly_df[col].shift(x+i)
+                price_weather_weekly_df = price_weather_weekly_df.copy()
+
 
     added_shifted_cols = add_shifted_column(12, "Alface Crespa - Roça", price_weather_weekly_df)
 
     price_weather_weekly_df = price_weather_weekly_df[price_weather_weekly_df.index >= '2017-04-30']
-    price_weather_weekly_df.to_csv('../processed_data/price_weather_weekly_df.V1.csv')
+    price_weather_weekly_df.to_csv('../processed_data/price_weather_weekly_df.V2.csv')
 
 
 if __name__ == '__main__':
