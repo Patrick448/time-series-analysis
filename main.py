@@ -50,6 +50,12 @@ arg_parser.add_argument('-save_path', '-sp',
 arg_parser.add_argument('-experiment_group', '-eg',
                         type=str,
                         help='name of the experiment group')
+arg_parser.add_argument('-start_offset', '-so',
+                        type=int,
+                        help='start offset')
+arg_parser.add_argument('-end_offset', '-eo',
+                        type=int,
+                        help='end offset')
 
 args = arg_parser.parse_args()
 
@@ -63,6 +69,8 @@ input_file = None
 save_path = None
 model_name = None
 experiment_group = None
+start_offset = None
+end_offset = None
 
 if args.config_file:
     with open(args.config_file, 'r') as f:
@@ -76,6 +84,8 @@ if args.config_file:
         save_path = config.get('save_path')
         model_name = config.get('model')
         experiment_group = config.get('experiment_group')
+        start_offset = config.get('start_offset')
+        end_offset = config.get('end_offset')
 
 columns = args.columns.split(';') if args.columns else columns
 in_size = args.in_size if args.in_size else in_size
@@ -87,6 +97,8 @@ input_file = args.input_file if args.input_file else input_file
 save_path = args.save_path if args.save_path else save_path
 model_name = args.model if args.model else model_name
 experiment_group = args.experiment_group if args.experiment_group else experiment_group
+start_offset = args.start_offset if args.start_offset else start_offset
+end_offset = args.end_offset if args.end_offset else end_offset
 
 
 df = pd.read_csv(input_file, index_col=0)
@@ -112,7 +124,9 @@ model.run(
     out_size,
     keep_only,
     save_path=model_path,
-    model_id=model_id)
+    model_id=model_id,
+    start_offset=start_offset,
+    end_offset=end_offset)
 
 rmse = model.rmse
 mae = model.mae

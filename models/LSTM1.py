@@ -45,7 +45,7 @@ class LSTM1:
 
 
 
-    def run(self, data, cols, in_size, out_size, keep_only, save_path=None, model_id=None):
+    def run(self, data, cols, in_size, out_size, keep_only, save_path=None, model_id=None, start_offset=None, end_offset=None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
         train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
@@ -72,6 +72,11 @@ class LSTM1:
         preprocessed_train = preprocess_pipeline.fit_transform(train)
         preprocessed_valid = preprocess_pipeline.transform(valid)
         preprocessed_test = preprocess_pipeline.transform(test)
+
+        if start_offset:
+            preprocessed_test = preprocessed_test[(start_offset-1):]
+        if end_offset:
+            preprocessed_test = preprocessed_test[:-end_offset]
 
 
         train_X, train_Y = input_output_split(preprocessed_train, in_size, keep_only_size)
@@ -102,7 +107,7 @@ class LSTM1:
                 save_best_only=True)
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
+        history = model.fit(train_X, train_Y, epochs=1, batch_size=200,
                             validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False, use_multiprocessing=True,
                             callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
