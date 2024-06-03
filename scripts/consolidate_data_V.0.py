@@ -58,16 +58,16 @@ def run():
    #         price_weather_weekly_df[f"{col}_+{i}"] = price_weather_weekly_df[col].shift(i)
     #        price_weather_weekly_df = price_weather_weekly_df.copy()
 
-    interest_points = [i for i in range(0, 62, 26)]
-    for col in price_weather_weekly_df.columns:
-        for x in interest_points:
-            price_weather_weekly_df[f"{col}_+{x}"] = price_weather_weekly_df[col].shift(x)
-            for i in range(7, 11):
-                price_weather_weekly_df[f"{col}_+{x+i}"] = price_weather_weekly_df[col].shift(x+i)
-                price_weather_weekly_df = price_weather_weekly_df.copy()
+    #interest_points = [i for i in range(0, 62, 26)]
+    #for col in price_weather_weekly_df.columns:
+    #    for x in interest_points:
+    #        price_weather_weekly_df[f"{col}_+{x}"] = price_weather_weekly_df[col].shift(x)
+    #        for i in range(7, 11):
+    #            price_weather_weekly_df[f"{col}_+{x+i}"] = price_weather_weekly_df[col].shift(x+i)
+    #            price_weather_weekly_df = price_weather_weekly_df.copy()
 
 
-    added_shifted_cols = add_shifted_column(12, "Alface Crespa - Roça", price_weather_weekly_df)
+    #added_shifted_cols = add_shifted_column(12, "Alface Crespa - Roça", price_weather_weekly_df)
 
     price_weather_weekly_df = price_weather_weekly_df[price_weather_weekly_df.index >= '2017-04-30']
     price_weather_weekly_df.to_csv('../processed_data/price_weather_weekly_df.V2.csv')

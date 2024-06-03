@@ -8,8 +8,9 @@ from sklearn.pipeline import Pipeline  # pipeline making
 import keras
 from keras.layers import Dense
 from keras.models import Sequential
-from keras.layers import LSTM, Attention, GRU
+from keras.layers import LSTM, Attention, GRU, Flatten
 from keras.layers import Dropout
+
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
 from utils.utils import input_output_split
@@ -91,9 +92,10 @@ class LSTM1:
         print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
         model = Sequential()
-        model.add(LSTM(200, activation="relu", input_shape=(train_X.shape[1], train_X.shape[2])))
+        model.add(LSTM(200, return_sequences=True, activation="relu", input_shape=(train_X.shape[1], train_X.shape[2])))
         #model.add(LSTM(100, return_sequences=True))
         model.add(Dropout(0.2))
+        model.add(Flatten())
         model.add(Dense(keep_only_size))
         model.compile(loss='mean_squared_error', optimizer='adam')
 
@@ -107,7 +109,7 @@ class LSTM1:
                 save_best_only=True)
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=1, batch_size=200,
+        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
                             validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False, use_multiprocessing=True,
                             callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
@@ -117,7 +119,8 @@ class LSTM1:
 
         self.model = keras.models.load_model(save_path)
         yhat = self.model.predict(test_X)
-        # test_X = test_X.reshape((test_X.shape[0], 16))
+        yhat = yhat.reshape((yhat.shape[0], keep_only_size))
+       # test_X = test_X.reshape((test_X.shape[0], 16))
         # calculate RMSE
 
         # ----------------- DENORMALIZE
