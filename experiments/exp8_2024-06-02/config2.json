@@ -1,0 +1,14 @@
+{
+  "model": "V0",
+  "input_file": "../../processed_data/price_weather_weekly_df.V0.csv",
+  "input_size": 8,
+  "output_size": 1,
+  "keep_only": 0,
+  "result_file": "result.csv",
+  "start_offset": 8,
+  "save_path": "../../saved_models",
+  "experiment_group": "2",
+  "columns": [
+    "Alface Crespa - Roça"
+  ]
+}
