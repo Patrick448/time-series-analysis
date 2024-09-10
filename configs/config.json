@@ -1,5 +1,5 @@
 {
-  "model": "V0",
+  "model": "dia_lstm_v0",
   "input_file": "processed_data/price_weather_weekly_df-2016-2023.csv",
   "input_size": 8,
   "output_size": 8,

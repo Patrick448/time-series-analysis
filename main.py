@@ -123,6 +123,7 @@ model.run(
     in_size,
     out_size,
     keep_only,
+    architecture=model_name,
     save_path=model_path,
     model_id=model_id,
     start_offset=start_offset,

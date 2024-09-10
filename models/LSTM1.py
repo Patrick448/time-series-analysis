@@ -7,8 +7,8 @@ from sklearn.pipeline import Pipeline  # pipeline making
 ## for Deep-learing:
 import keras
 from keras.layers import Dense
-from keras.models import Sequential
-from keras.layers import LSTM, Attention, GRU, Flatten
+from keras.models import Sequential, Model
+from keras.layers import LSTM, Attention, GRU, Flatten, Input, Permute, Concatenate
 from keras.layers import Dropout
 
 from custom_transforms.transforms import *
@@ -44,16 +44,41 @@ class LSTM1:
         pd.DataFrame(pred).to_csv(f'{ref_pred_path}/pred_{model_id}.csv')
         pd.DataFrame(ref).to_csv(f'{ref_pred_path}/ref_{model_id}.csv')
 
+    def _create_simple_lstm(self, input_shape: tuple, output_shape: int) -> Model:
+        input = Input(input_shape)
+        lstm = LSTM(200, return_sequences=True, activation="tanh")(input)
+        dropout = Dropout(0.2)(lstm)
+        flatten = Flatten()(dropout)
+        dense1 = Dense(10*output_shape)(flatten)
+        output = Dense(output_shape)(dense1)
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss='mean_squared_error', optimizer='adam')
+
+        return model
+
+    def _create_dia_lstm(self, input_shape: tuple, output_shape: int) -> Model:
+        input = Input(input_shape)
+        permuted_input = Permute((2, 1))(input)
+        temporal_attention = Attention()(permuted_input)
+        permute_temporal_attention = Permute((2, 1))(temporal_attention)
+        feature_attention = Attention()(input)
+        concatenate = Concatenate([permute_temporal_attention, feature_attention])
+        lstm = LSTM(200, return_sequences=True, activation="tanh")(concatenate)
+        dropout = Dropout(0.2)(lstm)
+        flatten = Flatten()(dropout)
+        dense1 = Dense(10*output_shape)(flatten)
+        output = Dense(output_shape)(dense1)
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss='mean_squared_error', optimizer='adam')
+
+        print(model.summary())
+        return model
 
 
-    def run(self, data, cols, in_size, out_size, keep_only, save_path=None, model_id=None, start_offset=None, end_offset=None):
+    def run(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2)
         train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
-        # in_size = 8
-        # out_size = 8
-        # keep_only_size = 8
-
         input_columns = cols
         n_vars = len(input_columns)
         scaler = MinMaxScaler(feature_range=(0, 1))
@@ -91,14 +116,22 @@ class LSTM1:
 
         print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
-        model = Sequential()
-        model.add(LSTM(200, return_sequences=True, activation="relu", input_shape=(train_X.shape[1], train_X.shape[2])))
-        #model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.2))
-        model.add(Flatten())
-        model.add(Dense(keep_only_size))
-        model.compile(loss='mean_squared_error', optimizer='adam')
 
+
+        #model = Sequential()
+       # model.add(LSTM(6, return_sequences=True, activation="tanh", input_shape=(train_X.shape[1], train_X.shape[2])))
+       # model.add(Dropout(0.2))
+       # model.add(Flatten())
+       # model.add(Dense(10))
+       # model.add(Dense(keep_only_size))
+       # model.compile(loss='mean_squared_error', optimizer='adam')
+
+        if architecture == 'simple_lstm_v0':
+            model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
+        elif architecture == 'dia_lstm_v0':
+            model = self._create_dia_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
+        else:
+            raise ValueError(f'Architecture {architecture} not found')
 
         model_checkpoint_callback = None
         if save_path:
