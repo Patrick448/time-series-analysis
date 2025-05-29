@@ -136,7 +136,7 @@ class LSTM1:
         model_checkpoint_callback = None
         if save_path:
             model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
-                filepath=save_path,
+                filepath=save_path+".keras",
                 monitor='val_loss',
                 mode='min',
                 save_best_only=True)
@@ -144,13 +144,13 @@ class LSTM1:
         # fit network
         history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
                             validation_data=(validation_X, validation_Y),
-                            verbose=2, shuffle=False, use_multiprocessing=True,
+                            verbose=2, shuffle=False,# use_multiprocessing=True,
                             callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
                                        model_checkpoint_callback])
         self.history = history.history
         # make a prediction
 
-        self.model = keras.models.load_model(save_path)
+        self.model = keras.models.load_model(save_path+".keras")
         yhat = self.model.predict(test_X)
         yhat = yhat.reshape((yhat.shape[0], keep_only_size))
        # test_X = test_X.reshape((test_X.shape[0], 16))
