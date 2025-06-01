@@ -36,13 +36,20 @@ class LSTM1:
         self.r2_by_timestep = None
         self.history = None
 
-    def save_pred_ref(self, ref_pred_path, pred, ref, model_id):
+    def save_pred_ref(self, ref_pred_path, pred, ref,  model_id, dt=None):
         try:
             os.mkdir(ref_pred_path)
         except:
             pass
-        pd.DataFrame(pred).to_csv(f'{ref_pred_path}/pred_{model_id}.csv')
-        pd.DataFrame(ref).to_csv(f'{ref_pred_path}/ref_{model_id}.csv')
+        pred_df =pd.DataFrame(pred)
+        ref_df =pd.DataFrame(ref)
+
+        if dt is not None:
+            pred_df.index = dt
+            ref_df.index= dt
+
+        pred_df.to_csv(f'{ref_pred_path}/pred_{model_id}.csv')
+        ref_df.to_csv(f'{ref_pred_path}/ref_{model_id}.csv')
 
     def _create_simple_lstm(self, input_shape: tuple, output_shape: int) -> Model:
         input = Input(input_shape)
@@ -75,8 +82,8 @@ class LSTM1:
         return model
 
 
-    def run(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None):
-        train, valid, test = train_test_validation_split(data, 0.7, 0.2)
+    def run(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+        train, valid, test = train_test_validation_split(data, 0.7, 0.2, train_valid_test=train_valid_test)
         train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
         input_columns = cols
@@ -172,7 +179,7 @@ class LSTM1:
 
         # -----------------
 
-        self.save_pred_ref("pred_ref", yhat, test_Y, model_id)
+        self.save_pred_ref("pred_ref", yhat, test_Y, model_id,test[in_size-1:-out_size].index)
 
         rmse = np.sqrt(mean_squared_error(test_Y, yhat))
         mae = mean_absolute_error(test_Y, yhat)

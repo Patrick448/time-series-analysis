@@ -1,10 +1,16 @@
 import math
 
-def train_test_validation_split(data, train_percentage, test_percentage):
+def train_test_validation_split(data, train_percentage=None, test_percentage=None, train_valid_test: tuple = None):
     dataset_size = len(data)
-    train_size = math.ceil(dataset_size * train_percentage)
-    test_size = math.ceil(dataset_size * test_percentage)
-    validation_size = dataset_size - train_size - test_size
+    if train_valid_test is None:
+        train_size = math.ceil(dataset_size * train_percentage)
+        test_size = math.ceil(dataset_size * test_percentage)
+        validation_size = dataset_size - train_size - test_size
+    else:
+        train_size =train_valid_test[0]
+        validation_size = train_valid_test[1]
+        test_size = train_valid_test[2]
+
     print(f"train_size: {train_size}\nvalidation_size: {validation_size}\ntest_size: {test_size}")
 
     train = data[0:train_size]

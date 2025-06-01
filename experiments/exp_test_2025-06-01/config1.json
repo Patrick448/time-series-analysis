@@ -1,0 +1,15 @@
+{
+  "model": "simple_lstm_v0",
+  "input_file": "../../processed_data/price_weather_weekly_df-2016-2023.csv",
+  "input_size": 8,
+  "output_size": 8,
+  "keep_only": null,
+  "result_file": "result.csv",
+  "save_path": "../../saved_models",
+  "experiment_group": "4",
+  "train_valid_test": [230, 72, 100],
+  "columns": [
+    "Alface Crespa - Roça",
+    "TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)"
+  ]
+}

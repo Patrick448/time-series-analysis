@@ -57,6 +57,10 @@ arg_parser.add_argument('-end_offset', '-eo',
                         type=int,
                         help='end offset')
 
+arg_parser.add_argument('-train_valid_test', '-tvt',
+                        type=tuple,
+                        help='train, validation and test set split')
+
 args = arg_parser.parse_args()
 
 columns = None
@@ -86,6 +90,7 @@ if args.config_file:
         experiment_group = config.get('experiment_group')
         start_offset = config.get('start_offset')
         end_offset = config.get('end_offset')
+        train_valid_test = config.get('train_valid_test')
 
 columns = args.columns.split(';') if args.columns else columns
 in_size = args.in_size if args.in_size else in_size
@@ -99,7 +104,7 @@ model_name = args.model if args.model else model_name
 experiment_group = args.experiment_group if args.experiment_group else experiment_group
 start_offset = args.start_offset if args.start_offset else start_offset
 end_offset = args.end_offset if args.end_offset else end_offset
-
+train_valid_test = tuple(args.train_valid_test) if args.train_valid_test else train_valid_test
 
 df = pd.read_csv(input_file, index_col=0)
 model = LSTM1()
@@ -127,7 +132,8 @@ model.run(
     save_path=model_path,
     model_id=model_id,
     start_offset=start_offset,
-    end_offset=end_offset)
+    end_offset=end_offset,
+    train_valid_test=train_valid_test)
 
 rmse = model.rmse
 mae = model.mae
