@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.pipeline import Pipeline  # pipeline making
+from sklearn.model_selection import TimeSeriesSplit
 
 ## for Deep-learing:
 import keras
@@ -241,6 +242,8 @@ class RunModels:
         preprocessed_valid = preprocess_pipeline.transform(valid)
         preprocessed_test = preprocess_pipeline.transform(test)
 
+
+
         if start_offset:
             preprocessed_test = preprocessed_test[(start_offset-1):]
         if end_offset:
@@ -259,15 +262,6 @@ class RunModels:
         print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
 
-
-        #model = Sequential()
-       # model.add(LSTM(6, return_sequences=True, activation="tanh", input_shape=(train_X.shape[1], train_X.shape[2])))
-       # model.add(Dropout(0.2))
-       # model.add(Flatten())
-       # model.add(Dense(10))
-       # model.add(Dense(keep_only_size))
-       # model.compile(loss='mean_squared_error', optimizer='adam')
-
         if architecture == 'simple_lstm_v0':
             model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
         elif architecture == 'dia_lstm_v0':
@@ -282,6 +276,7 @@ class RunModels:
                 monitor='val_loss',
                 mode='min',
                 save_best_only=True)
+
 
         # fit network
         history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
