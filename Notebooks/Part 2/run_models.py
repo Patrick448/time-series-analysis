@@ -238,6 +238,14 @@ class RunModels:
             ]
         )
 
+        tscv_split = TimeSeriesSplit(gap=in_size-1)
+        for i, (train_index, test_index) in enumerate(tscv_split.split(data)):
+            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+            cv_train = preprocess_pipeline.fit_transform(cv_train)
+            cv_test = preprocess_pipeline.transform(cv_test)
+
+        #--
+
         preprocessed_train = preprocess_pipeline.fit_transform(train)
         preprocessed_valid = preprocess_pipeline.transform(valid)
         preprocessed_test = preprocess_pipeline.transform(test)
