@@ -244,112 +244,59 @@ class RunModels:
             cv_train = preprocess_pipeline.fit_transform(cv_train)
             cv_test = preprocess_pipeline.transform(cv_test)
 
-        #--
+            cv_train_X, cv_train_Y = input_output_split(cv_train, in_size, out_size)
+            cv_test_X, cv_test_Y = input_output_split(cv_test, in_size, out_size)
 
-        preprocessed_train = preprocess_pipeline.fit_transform(train)
-        preprocessed_valid = preprocess_pipeline.transform(valid)
-        preprocessed_test = preprocess_pipeline.transform(test)
+            # reshape input to be 3D [samples, timesteps, features]
+            cv_train_X = cv_train_X.reshape((cv_train_X.shape[0], 1, cv_train_X.shape[1]))
+            cv_test_X = cv_test_X.reshape((cv_test_X.shape[0], 1, cv_test_X.shape[1]))
 
+            if architecture == 'simple_lstm_v0':
+                model = self._create_simple_lstm((cv_train_X.shape[1], cv_train_X.shape[2]), keep_only_size)
+            elif architecture == 'dia_lstm_v0':
+                model = self._create_dia_lstm((cv_train_X.shape[1], cv_train_X.shape[2]), keep_only_size)
+            else:
+                raise ValueError(f'Architecture {architecture} not found')
 
+            model_checkpoint_callback = None
+            if save_path:
+                model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
+                    filepath=save_path + ".keras",
+                    monitor='val_loss',
+                    mode='min',
+                    save_best_only=True)
 
-        if start_offset:
-            preprocessed_test = preprocessed_test[(start_offset-1):]
-        if end_offset:
-            preprocessed_test = preprocessed_test[:-end_offset]
+            # fit network
+            history = model.fit(cv_train_X, cv_train_Y, epochs=100, batch_size=200,
+                               # validation_data=(validation_X, validation_Y),
+                                verbose=2, shuffle=False,  # use_multiprocessing=True,
+                                callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
+                                           model_checkpoint_callback])
+            self.history = history.history
+            # make a prediction
 
+            self.model = keras.models.load_model(save_path + ".keras")
 
-        train_X, train_Y = input_output_split(preprocessed_train, in_size, keep_only_size)
-        validation_X, validation_Y = input_output_split(preprocessed_valid, in_size, keep_only_size)
-        test_X, test_Y = input_output_split(preprocessed_test, in_size, keep_only_size)
+            yhat = self.model.predict(cv_test_X)
+            denorm_test_Y = np.copy(cv_test_Y)
+            denorm_yhat = np.copy(yhat)
 
-        # reshape input to be 3D [samples, timesteps, features]
-        train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
-        validation_X = validation_X.reshape((validation_X.shape[0], 1, validation_X.shape[1]))
-        test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
+            for i, col in enumerate(denorm_test_Y.T):
+                denorm_test_Y[:, i] = denormalize_with(col, len(cols), scaler, 0)
 
-        print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
+            for i, col in enumerate(denorm_yhat.T):
+                denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
 
+            test_Y = denorm_test_Y
+            yhat = denorm_yhat
 
-        if architecture == 'simple_lstm_v0':
-            model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
-        elif architecture == 'dia_lstm_v0':
-            model = self._create_dia_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
-        else:
-            raise ValueError(f'Architecture {architecture} not found')
+            # -----------------
 
-        model_checkpoint_callback = None
-        if save_path:
-            model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
-                filepath=save_path+".keras",
-                monitor='val_loss',
-                mode='min',
-                save_best_only=True)
+            self.save_pred_ref("pred_ref", yhat, test_Y, model_id, test[in_size - 1:-out_size].index)
 
+            rmse = np.sqrt(mean_squared_error(test_Y, yhat))
+            mae = mean_absolute_error(test_Y, yhat)
+            mape = mean_absolute_percentage_error(test_Y, yhat)
+            mse = mean_squared_error(test_Y, yhat)
+            r2 = r2_score(test_Y, yhat)
 
-        # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
-                            validation_data=(validation_X, validation_Y),
-                            verbose=2, shuffle=False,# use_multiprocessing=True,
-                            callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
-                                       model_checkpoint_callback])
-        self.history = history.history
-        # make a prediction
-
-        self.model = keras.models.load_model(save_path+".keras")
-        yhat = self.model.predict(test_X)
-        yhat = yhat.reshape((yhat.shape[0], keep_only_size))
-       # test_X = test_X.reshape((test_X.shape[0], 16))
-        # calculate RMSE
-
-        # ----------------- DENORMALIZE
-
-        denorm_test_Y = np.copy(test_Y)
-        denorm_yhat = np.copy(yhat)
-
-        for i, col in enumerate(denorm_test_Y.T):
-            denorm_test_Y[:, i] = denormalize_with(col, len(cols), scaler, 0)
-
-        for i, col in enumerate(denorm_yhat.T):
-            denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
-
-        test_Y = denorm_test_Y
-        yhat = denorm_yhat
-
-        # -----------------
-
-        self.save_pred_ref("pred_ref", yhat, test_Y, model_id,test[in_size-1:-out_size].index)
-
-        rmse = np.sqrt(mean_squared_error(test_Y, yhat))
-        mae = mean_absolute_error(test_Y, yhat)
-        mape = mean_absolute_percentage_error(test_Y, yhat)
-        mse = mean_squared_error(test_Y, yhat)
-        r2 = r2_score(test_Y, yhat)
-
-        self.mse = mse
-        self.mape = mape
-        self.rmse = rmse
-        self.mae = mae
-        self.r2 = r2
-
-
-        rmses_list = []
-        mae_list = []
-        mse_list = []
-        mape_list = []
-        r2_list = []
-
-        # todo: verificar se isso está correto
-        for i in range(keep_only_size):
-            pred = yhat[:, i]
-            ref = test_Y[:, i]
-            rmses_list.append(np.sqrt(mean_squared_error(ref, pred)))
-            mae_list.append(mean_absolute_error(ref, pred))
-            mse_list.append(mean_squared_error(ref, pred))
-            mape_list.append(mean_absolute_percentage_error(ref, pred))
-            r2_list.append(r2_score(ref, pred))
-
-        self.rmse_by_timestep = pd.DataFrame(rmses_list, index=[i + 1 for i in range(keep_only_size)], columns=['RMSE'])
-        self.mae_by_timestep = pd.DataFrame(mae_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAE'])
-        self.mse_by_timestep = pd.DataFrame(mse_list, index=[i + 1 for i in range(keep_only_size)], columns=['MSE'])
-        self.mape_by_timestep = pd.DataFrame(mape_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAPE'])
-        self.r2_by_timestep = pd.DataFrame(r2_list, index=[i + 1 for i in range(keep_only_size)], columns=['R2'])
