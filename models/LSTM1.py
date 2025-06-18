@@ -218,19 +218,36 @@ class LSTM1:
         self.r2_by_timestep = pd.DataFrame(r2_list, index=[i + 1 for i in range(keep_only_size)], columns=['R2'])
 
 
-    def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
-        train, valid, test = train_test_validation_split(data, 0.7, 0.2, train_valid_test=train_valid_test)
-        train_index, valid_index, test_index = train.index, valid.index, test.index
+    def preprocess_data(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         keep_only_size = 1 if keep_only is not None else out_size
         input_columns = cols
         n_vars = len(input_columns)
+
+
+        tscv_split = TimeSeriesSplit(test_size=in_size+out_size, n_splits=10)
+
+        return tscv_split
+
+    def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+        #train, valid, test = train_test_validation_split(data, 0.7, 0.2, train_valid_test=train_valid_test)
+        #train_index, valid_index, test_index = train.index, valid.index, test.index
+
+        #separação dos dados
+        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+
+        keep_only_size = 1 if keep_only is not None else out_size
+        input_columns = cols
+        n_vars = len(input_columns)
+
+
+        # daqui pra frente são coisas especificas do modelo
+        # todo: talvez o scaler possa ser passado para a etapa anterior
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(input_columns)
         reframer = Reframer(n_in=in_size, n_out=out_size)
         drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars, keep_only=keep_only)
         pred_list = []
         ref_list = []
-
 
 
         preprocess_pipeline = Pipeline(
@@ -242,9 +259,12 @@ class LSTM1:
             ]
         )
 
-        tscv_split = TimeSeriesSplit(test_size=in_size+out_size, n_splits=10)
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+            # todo: pegar o final do cv_train (tamanho in_size) e concatenar com o início do cv_test
+            #  ver se está funcionando corretamente
+            cv_train = cv_train.tail(in_size).append(cv_test)
+
             cv_train_pp = preprocess_pipeline.fit_transform(cv_train)
             cv_test_pp = preprocess_pipeline.transform(cv_test)
 
