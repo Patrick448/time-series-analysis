@@ -4,7 +4,7 @@ from os.path import abspath
 
 import numpy as np
 
-from models.LSTM1 import LSTM1
+from models.ModelTraining import ModelTraining
 import pandas as pd
 import argparse
 
@@ -107,7 +107,7 @@ end_offset = args.end_offset if args.end_offset else end_offset
 train_valid_test = tuple(args.train_valid_test) if args.train_valid_test else train_valid_test
 
 df = pd.read_csv(input_file, index_col=0)
-model = LSTM1()
+model = ModelTraining()
 
 model_id = None
 if save_path is not None:
@@ -120,9 +120,9 @@ if save_path is not None:
         f.close()
 
     model_path = f'{save_path}/model_{model_name}.{model_id}'
-    os.mkdir(model_path)
+    #os.mkdir(model_path)
 
-model.run(
+model.run_crossv(
     df,
     columns,
     in_size,
