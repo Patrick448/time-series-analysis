@@ -325,14 +325,36 @@ class ModelTraining:
         for i, col in enumerate(denorm_yhat.T):
             denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
 
-        test_Y = denorm_test_Y
-        yhat = denorm_yhat
+        #test_Y = denorm_test_Y
+        #yhat = denorm_yhat
 
-        return model_path, test_Y, yhat
+        test_Y_series_date = pd.Series(denorm_test_Y[0], index=test.index[-out_size:])
+        yhat_series_date = pd.Series(denorm_yhat[0], index=test.index[-out_size:])
 
-    #todo: falta normalização pro SARIMAX
-    def sarimax_train_predict(self, train, test,  identifier, cols,target_col, in_size, out_size, keep_only, architecture, save_path=None):
-        model = SARIMAX(train[target_col], #exog=train['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
+        return model_path, test_Y_series_date, yhat_series_date
+
+    #todo: conferir normalização e ver se dá pra padronizar mais coisas entre os difentes algoritmos
+    def sarimax_train_predict(self, train, test,  identifier, cols, target_col, in_size, out_size, keep_only, architecture, save_path=None):
+
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        column_selector = ColumnSelector(cols)
+        #reframer = Reframer(n_in=in_size, n_out=out_size)
+        #drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars, keep_only=keep_only)
+
+        preprocess_pipeline = Pipeline(
+            [
+                ('column_selector', column_selector),
+                ('scaler', scaler),
+                #('reframer', reframer),
+               # ('drop_cols', drop_cols)
+            ]
+        )
+
+        train_pp = pd.Series(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
+        #todo: ver se precisa preprocessar o conjunto de teste
+        test_pp = pd.Series(preprocess_pipeline.transform(test)[:,0], index=test.index)
+
+        model = SARIMAX(train_pp, #exog=train['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
                         order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
         # fit model
         model_fit = model.fit(disp=False)
@@ -341,10 +363,21 @@ class ModelTraining:
                                               #exog=data_test['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
                                               dynamic=False)
 
+        #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
         test_Y = test[target_col]
+        yhat = prediction.predicted_mean
         pred_conf = prediction.conf_int()
         model_path = ""
-        return model_path, test_Y, prediction.predicted_mean, pred_conf
+
+        denorm_yhat = np.copy([yhat])
+
+        for i, col in enumerate(denorm_yhat.T):
+            denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
+
+        test_Y_series_date = pd.Series(test_Y[0], index=test.index)
+        yhat_series_date = pd.Series(denorm_yhat[0], index=test.index)
+
+        return model_path, test_Y_series_date, yhat_series_date, pred_conf
 
 
 
@@ -361,12 +394,12 @@ class ModelTraining:
 
             model_path, test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
 
-            pred_list_local = [cv_test.index[0]]
-            pred_list_local.extend(yhat[0])
+            pred_list_local = [str(yhat.index[0])]
+            pred_list_local.extend(yhat.values)
             pred_list.append(pred_list_local)
 
-            ref_list_local = [cv_test.index[0]]
-            ref_list_local.extend(test_Y[0])
+            ref_list_local = [str(test_Y.index[0])]
+            ref_list_local.extend(test_Y.values)
             ref_list.append(ref_list_local)
 
             models.append(model_path)
