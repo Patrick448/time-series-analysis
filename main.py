@@ -122,7 +122,7 @@ if save_path is not None:
     model_path = f'{save_path}/model_{model_name}.{model_id}'
     #os.mkdir(model_path)
 
-model.run_crossv(
+model.run_crossv_sarimax(
     df,
     columns,
     in_size,

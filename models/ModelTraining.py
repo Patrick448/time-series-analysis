@@ -11,6 +11,7 @@ from keras.layers import Dense
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Attention, GRU, Flatten, Input, Permute, Concatenate
 from keras.layers import Dropout
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from custom_transforms.transforms import *
 from utils.utils import train_test_validation_split
@@ -252,7 +253,7 @@ class ModelTraining:
         return preprocess_pipeline
 
 
-    def lstm_train_predict(self, cv_train, cv_test, identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
+    def lstm_train_predict(self, train, test, identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
 
         # daqui pra frente são coisas especificas do modelo
         # todo: talvez o scaler possa ser passado para a etapa anterior
@@ -275,22 +276,22 @@ class ModelTraining:
         )
 
         model_path = f"{save_path}.t{identifier}.keras"
-        cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+        test = pd.concat([train.tail(in_size), test], axis="rows")
 
-        cv_train_pp = preprocess_pipeline.fit_transform(cv_train)
-        cv_test_pp = preprocess_pipeline.transform(cv_test)
+        train_pp = preprocess_pipeline.fit_transform(train)
+        test_pp = preprocess_pipeline.transform(test)
 
-        cv_train_X, cv_train_Y = input_output_split(cv_train_pp, in_size, out_size)
-        cv_test_X, cv_test_Y = input_output_split(cv_test_pp, in_size, out_size)
+        train_X, train_Y = input_output_split(train_pp, in_size, out_size)
+        test_X, test_Y = input_output_split(test_pp, in_size, out_size)
 
         # reshape input to be 3D [samples, timesteps, features]
-        cv_train_X = cv_train_X.reshape((cv_train_X.shape[0], 1, cv_train_X.shape[1]))
-        cv_test_X = cv_test_X.reshape((cv_test_X.shape[0], 1, cv_test_X.shape[1]))
+        train_X = train_X.reshape((train_X.shape[0], 1, train_X.shape[1]))
+        test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
 
         if architecture == 'simple_lstm_v0':
-            model = self._create_simple_lstm((cv_train_X.shape[1], cv_train_X.shape[2]), keep_only_size)
+            model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
         elif architecture == 'dia_lstm_v0':
-            model = self._create_dia_lstm((cv_train_X.shape[1], cv_train_X.shape[2]), keep_only_size)
+            model = self._create_dia_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
         else:
             raise ValueError(f'Architecture {architecture} not found')
 
@@ -303,7 +304,7 @@ class ModelTraining:
                 save_best_only=True)
 
         # fit network
-        history = model.fit(cv_train_X, cv_train_Y, epochs=100, batch_size=200,
+        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
                             # validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False,  # use_multiprocessing=True,
                             validation_split=0.1,
@@ -314,8 +315,8 @@ class ModelTraining:
 
         self.model = keras.models.load_model(model_path)
 
-        yhat = self.model.predict(cv_test_X)
-        denorm_test_Y = np.copy(cv_test_Y)
+        yhat = self.model.predict(test_X)
+        denorm_test_Y = np.copy(test_Y)
         denorm_yhat = np.copy(yhat)
 
         for i, col in enumerate(denorm_test_Y.T):
@@ -328,6 +329,23 @@ class ModelTraining:
         yhat = denorm_yhat
 
         return model_path, test_Y, yhat
+
+    def sarimax_train_predict(self, train, test,  identifier, cols,target_col, in_size, out_size, keep_only, architecture, save_path=None):
+        model = SARIMAX(train[target_col], #exog=train['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
+                        order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
+        # fit model
+        model_fit = model.fit(disp=False)
+
+        prediction = model_fit.get_prediction(start=len(train), end= len(train)+ len(test) - 1,
+                                              #exog=data_test['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
+                                              dynamic=False)
+
+        test_Y = test[target_col]
+        pred_conf = prediction.conf_int()
+        model_path = ""
+        return model_path, test_Y, prediction.predicted_mean, pred_conf
+
+
 
     def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         #separação dos dados
@@ -361,4 +379,36 @@ class ModelTraining:
 
         self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
 
+
+    def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+        #separação dos dados
+        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+        pred_list = []
+        ref_list = []
+        models = []
+        target_col = 'Alface Crespa - Roça'
+
+        for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+            #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+
+            model_path, test_Y, yhat, pred_conf = self.sarimax_train_predict(cv_train, cv_test, i_split, cols, target_col, in_size, out_size, keep_only, architecture, save_path)
+            pred_list_local = [str(yhat.index[0])]
+            pred_list_local.extend(yhat.values)
+            pred_list.append(pred_list_local)
+
+            ref_list_local = [str(test_Y.index[0])]
+            ref_list_local.extend(test_Y.values)
+            ref_list.append(ref_list_local)
+
+            models.append(model_path)
+
+        pred_df = pd.DataFrame(pred_list)
+        pred_df.rename(columns={0: 'dt'}, inplace=True)
+        ref_df = pd.DataFrame(ref_list)
+        ref_df.rename(columns={0: 'dt'}, inplace=True)
+        pred_df.set_index('dt', inplace=True)
+        ref_df.set_index('dt', inplace=True)
+
+        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
 
