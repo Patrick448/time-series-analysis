@@ -330,6 +330,7 @@ class ModelTraining:
 
         return model_path, test_Y, yhat
 
+    #todo: falta normalização pro SARIMAX
     def sarimax_train_predict(self, train, test,  identifier, cols,target_col, in_size, out_size, keep_only, architecture, save_path=None):
         model = SARIMAX(train[target_col], #exog=train['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
                         order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
