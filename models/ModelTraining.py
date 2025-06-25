@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+from prophet import Prophet
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.pipeline import Pipeline  # pipeline making
@@ -85,7 +86,6 @@ class ModelTraining:
 
         print(model.summary())
         return model
-
 
     def run(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2, train_valid_test=train_valid_test)
@@ -221,7 +221,6 @@ class ModelTraining:
         self.mape_by_timestep = pd.DataFrame(mape_list, index=[i + 1 for i in range(keep_only_size)], columns=['MAPE'])
         self.r2_by_timestep = pd.DataFrame(r2_list, index=[i + 1 for i in range(keep_only_size)], columns=['R2'])
 
-
     def preprocess_data(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         keep_only_size = 1 if keep_only is not None else out_size
         input_columns = cols
@@ -231,7 +230,6 @@ class ModelTraining:
         tscv_split = TimeSeriesSplit(test_size=in_size+out_size, n_splits=10)
 
         return tscv_split
-
 
     def get_LSTM_preprocess_pipeline(self, input_columns, in_size, out_size, keep_only) -> Pipeline:
 
@@ -251,7 +249,6 @@ class ModelTraining:
         )
 
         return preprocess_pipeline
-
 
     def lstm_train_predict(self, train, test, identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
 
@@ -379,7 +376,55 @@ class ModelTraining:
 
         return model_path, test_Y_series_date, yhat_series_date, pred_conf
 
+    def prophet_train_predict(self, train, test,  identifier, cols, target_col, in_size, out_size, keep_only, architecture, save_path=None):
 
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        column_selector = ColumnSelector(cols)
+        #reframer = Reframer(n_in=in_size, n_out=out_size)
+        #drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars, keep_only=keep_only)
+
+        preprocess_pipeline = Pipeline(
+            [
+                ('column_selector', column_selector),
+                ('scaler', scaler),
+                #('reframer', reframer),
+               # ('drop_cols', drop_cols)
+            ]
+        )
+
+        train_pp = pd.Series(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
+        #todo: ver se precisa preprocessar o conjunto de teste
+        test_pp = pd.Series(preprocess_pipeline.transform(test)[:,0], index=test.index)
+
+        # Prepare data for Prophet
+        prophet_data = train_pp.reset_index().rename(columns={'dt': 'ds', 0: 'y'})
+        prophet_data['ds'] = pd.to_datetime(prophet_data['ds']).dt.tz_localize(None)
+
+        # Fit Prophet model
+        model = Prophet()
+        model.fit(prophet_data)
+
+        # Forecasting
+        future = model.make_future_dataframe(periods=len(test), freq='W')
+        forecast = model.predict(future)
+
+        # Extract forecasted values
+        forecast_values = forecast[['ds', 'yhat']].tail(len(test))
+
+        #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
+        test_Y = test[target_col]
+        yhat = forecast_values['yhat'].values
+        #pred_conf = prediction.conf_int()
+        model_path = ""
+
+        denorm_yhat = np.copy([yhat])
+        for i, col in enumerate(denorm_yhat.T):
+            denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
+
+        test_Y_series_date = pd.Series(test_Y, index=test.index)
+        yhat_series_date = pd.Series(denorm_yhat[0], index=test.index)
+
+        return model_path, test_Y_series_date, yhat_series_date
 
     def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         #separação dos dados
@@ -413,7 +458,6 @@ class ModelTraining:
 
         self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
 
-
     def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         #separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
@@ -446,3 +490,36 @@ class ModelTraining:
 
         self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
 
+    def run_crossv_prophet(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+        #separação dos dados
+        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+        pred_list = []
+        ref_list = []
+        models = []
+
+        target_col = 'Alface Crespa - Roça'
+
+        for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+            #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+
+            model_path, test_Y, yhat = self.prophet_train_predict(cv_train, cv_test, i_split, cols, target_col, in_size, out_size, keep_only, architecture, save_path)
+
+            pred_list_local = [str(yhat.index[0])]
+            pred_list_local.extend(yhat.values)
+            pred_list.append(pred_list_local)
+
+            ref_list_local = [str(test_Y.index[0])]
+            ref_list_local.extend(test_Y.values)
+            ref_list.append(ref_list_local)
+
+            models.append(model_path)
+
+        pred_df = pd.DataFrame(pred_list)
+        pred_df.rename(columns={0: 'dt'}, inplace=True)
+        ref_df = pd.DataFrame(ref_list)
+        ref_df.rename(columns={0: 'dt'}, inplace=True)
+        pred_df.set_index('dt', inplace=True)
+        ref_df.set_index('dt', inplace=True)
+
+        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
