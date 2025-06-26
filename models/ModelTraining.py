@@ -338,6 +338,9 @@ class ModelTraining:
         #reframer = Reframer(n_in=in_size, n_out=out_size)
         #drop_cols = DropColumns(n_in=in_size, n_out=out_size, n_vars=n_vars, keep_only=keep_only)
 
+        #todo: esse preprocessamento remove os nomes de colunas, talvez seja interessante manter
+        #   preciso ver uma lógica para pegar as colunas exógenas
+        #   a coluna alvo sempre fica na primeira posição depois do preprocessamento? Onde estou definindo isso?
         preprocess_pipeline = Pipeline(
             [
                 ('column_selector', column_selector),
