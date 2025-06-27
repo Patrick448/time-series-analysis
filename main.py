@@ -122,7 +122,7 @@ if save_path is not None:
     model_path = f'{save_path}/model_{model_name}.{model_id}'
     #os.mkdir(model_path)
 
-model.run_crossv_sarimax(
+model.run_crossv_prophet(
     df,
     columns,
     in_size,
@@ -135,48 +135,48 @@ model.run_crossv_sarimax(
     end_offset=end_offset,
     train_valid_test=train_valid_test)
 
-rmse = model.rmse
-mae = model.mae
-mse = model.mse
-mape = model.mape
-r2 = model.r2
+# rmse = model.rmse
+# mae = model.mae
+# mse = model.mse
+# mape = model.mape
+# r2 = model.r2
+#
+# rmses = model.rmse_by_timestep['RMSE'].tolist()
+# maes = model.mae_by_timestep['MAE'].tolist()
+# mses = model.mse_by_timestep['MSE'].tolist()
+# mapes = model.mape_by_timestep['MAPE'].tolist()
+# r2s = model.r2_by_timestep['R2'].tolist()
+#
+# rmse_by_timestep = "\"" + ",".join(map(str, rmses)) + "\""
+# mae_by_timestep = "\"" + ",".join(map(str, maes)) + "\""
+# mse_by_timestep = "\"" + ",".join(map(str, mses)) + "\""
+# mape_by_timestep = "\"" + ",".join(map(str, mapes)) + "\""
+# r2_by_timestep = "\"" + ",".join(map(str, r2s)) + "\""
+#
+# loss = '\"'+','.join(map(str, model.history['loss'])) + '\"'
+# val_loss = '\"'+','.join(map(str, model.history['val_loss'])) + '\"'
+# columns_str = "\"" + ','.join(columns) + "\""
+#
+# csv_columns = ['experiment_group', 'model','model_id', 'save_path', 'in_size', 'out_size', 'keep_only',
+#                'RMSE', 'MAE', 'MSE', 'MAPE', 'R2',
+#                'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep', 'R2_by_timestep',
+#                'loss', 'val_loss', 'columns']
+#
+# csv_values = [experiment_group, model_name, model_id, abspath(model_path), in_size, out_size, keep_only,
+#               rmse, mae, mse, mape, r2,
+#               rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep, r2_by_timestep,
+#               loss, val_loss, columns_str]
+#
+#
+#
+# # Save the results
+# csv_string = ""
+# if args.output_header:
+#     csv_string = ",".join(csv_columns) + "\n"
+# csv_string += ",".join(map(str, csv_values)) + "\n"
+#
+# if result_file:
+#     with open(result_file, 'a') as f:
+#         f.write(csv_string)
 
-rmses = model.rmse_by_timestep['RMSE'].tolist()
-maes = model.mae_by_timestep['MAE'].tolist()
-mses = model.mse_by_timestep['MSE'].tolist()
-mapes = model.mape_by_timestep['MAPE'].tolist()
-r2s = model.r2_by_timestep['R2'].tolist()
-
-rmse_by_timestep = "\"" + ",".join(map(str, rmses)) + "\""
-mae_by_timestep = "\"" + ",".join(map(str, maes)) + "\""
-mse_by_timestep = "\"" + ",".join(map(str, mses)) + "\""
-mape_by_timestep = "\"" + ",".join(map(str, mapes)) + "\""
-r2_by_timestep = "\"" + ",".join(map(str, r2s)) + "\""
-
-loss = '\"'+','.join(map(str, model.history['loss'])) + '\"'
-val_loss = '\"'+','.join(map(str, model.history['val_loss'])) + '\"'
-columns_str = "\"" + ','.join(columns) + "\""
-
-csv_columns = ['experiment_group', 'model','model_id', 'save_path', 'in_size', 'out_size', 'keep_only',
-               'RMSE', 'MAE', 'MSE', 'MAPE', 'R2',
-               'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep', 'R2_by_timestep',
-               'loss', 'val_loss', 'columns']
-
-csv_values = [experiment_group, model_name, model_id, abspath(model_path), in_size, out_size, keep_only,
-              rmse, mae, mse, mape, r2,
-              rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep, r2_by_timestep,
-              loss, val_loss, columns_str]
-
-
-
-# Save the results
-csv_string = ""
-if args.output_header:
-    csv_string = ",".join(csv_columns) + "\n"
-csv_string += ",".join(map(str, csv_values)) + "\n"
-
-if result_file:
-    with open(result_file, 'a') as f:
-        f.write(csv_string)
-
-print(csv_string)
+# print(csv_string)

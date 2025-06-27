@@ -350,12 +350,12 @@ class ModelTraining:
             ]
         )
 
-        train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
+        train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train), index=train.index, columns=cols)
         #todo: ver se precisa preprocessar o conjunto de teste
-        test_pp = pd.DataFrame(preprocess_pipeline.transform(test)[:,0], index=test.index)
+        test_pp = pd.DataFrame(preprocess_pipeline.transform(test), index=test.index, columns=cols)
         exog = train_pp.iloc[:, 1:]
         exog = exog if len(exog.columns) else None
-        model = SARIMAX(train_pp, exog=exog,
+        model = SARIMAX(train_pp[cols[0]], exog=exog,
                         order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
         # fit model
         model_fit = model.fit(disp=False)
@@ -396,16 +396,21 @@ class ModelTraining:
             ]
         )
 
-        train_pp = pd.Series(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
+        train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train), index=train.index, columns=cols)
         #todo: ver se precisa preprocessar o conjunto de teste
-        test_pp = pd.Series(preprocess_pipeline.transform(test)[:,0], index=test.index)
+        test_pp = pd.DataFrame(preprocess_pipeline.transform(test), index=test.index,  columns=cols)
 
         # Prepare data for Prophet
-        prophet_data = train_pp.reset_index().rename(columns={'dt': 'ds', 0: 'y'})
+        prophet_data = train_pp.reset_index().rename(columns={'dt': 'ds', cols[0]: 'y'})
         prophet_data['ds'] = pd.to_datetime(prophet_data['ds']).dt.tz_localize(None)
-
-        # Fit Prophet model
+        exog = train_pp.iloc[:, 1:]
+        #exog = exog if len(exog.columns) else None
         model = Prophet()
+
+        if len(exog.columns) > 0:
+            for col in exog.columns:
+                model.add_regressor(col)
+
         model.fit(prophet_data)
 
         # Forecasting
@@ -416,7 +421,7 @@ class ModelTraining:
         forecast_values = forecast[['ds', 'yhat']].tail(len(test))
 
         #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
-        test_Y = test[target_col]
+        test_Y = test[cols[0]]
         yhat = forecast_values['yhat'].values
         #pred_conf = prediction.conf_int()
         model_path = ""
@@ -431,6 +436,7 @@ class ModelTraining:
         return model_path, test_Y_series_date, yhat_series_date
 
     def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+
         #separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
         pred_list = []
@@ -440,7 +446,6 @@ class ModelTraining:
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
             #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-
             model_path, test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
 
             pred_list_local = [str(yhat.index[0])]
