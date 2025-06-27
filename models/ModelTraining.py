@@ -350,11 +350,12 @@ class ModelTraining:
             ]
         )
 
-        train_pp = pd.Series(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
+        train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train)[:,0], index=train.index)
         #todo: ver se precisa preprocessar o conjunto de teste
-        test_pp = pd.Series(preprocess_pipeline.transform(test)[:,0], index=test.index)
-
-        model = SARIMAX(train_pp, #exog=train['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
+        test_pp = pd.DataFrame(preprocess_pipeline.transform(test)[:,0], index=test.index)
+        exog = train_pp.iloc[:, 1:]
+        exog = exog if len(exog.columns) else None
+        model = SARIMAX(train_pp, exog=exog,
                         order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
         # fit model
         model_fit = model.fit(disp=False)
@@ -364,7 +365,7 @@ class ModelTraining:
                                               dynamic=False)
 
         #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
-        test_Y = test[target_col]
+        test_Y = test[cols[0]]
         yhat = prediction.predicted_mean
         pred_conf = prediction.conf_int()
         model_path = ""
