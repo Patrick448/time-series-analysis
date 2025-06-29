@@ -331,7 +331,7 @@ class ModelTraining:
         return model_path, test_Y_series_date, yhat_series_date
 
     #todo: conferir normalização e ver se dá pra padronizar mais coisas entre os difentes algoritmos
-    def sarimax_train_predict(self, train, test,  identifier, cols, target_col, in_size, out_size, keep_only, architecture, save_path=None):
+    def sarimax_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(cols)
@@ -351,17 +351,19 @@ class ModelTraining:
         )
 
         train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train), index=train.index, columns=cols)
-        #todo: ver se precisa preprocessar o conjunto de teste
         test_pp = pd.DataFrame(preprocess_pipeline.transform(test), index=test.index, columns=cols)
-        exog = train_pp.iloc[:, 1:]
-        exog = exog if len(exog.columns) else None
-        model = SARIMAX(train_pp[cols[0]], exog=exog,
+        exog_train = train_pp.iloc[:, 1:]
+        exog_train = exog_train if len(exog_train.columns) else None
+        model = SARIMAX(train_pp[cols[0]], exog=exog_train,
                         order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
         # fit model
         model_fit = model.fit(disp=False)
 
+        exog_test = test_pp.iloc[:, 1:]
+        exog_test = exog_test if len(exog_test.columns) else None
+
         prediction = model_fit.get_prediction(start=len(train), end= len(train)+ len(test) - 1,
-                                              #exog=data_test['TEMPERATURA DO PONTO DE ORVALHO (°C)'],
+                                              exog=exog_test,
                                               dynamic=False)
 
         #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
@@ -375,12 +377,12 @@ class ModelTraining:
         for i, col in enumerate(denorm_yhat.T):
             denorm_yhat[:, i] = denormalize_with(col, len(cols), scaler, 0)
 
-        test_Y_series_date = pd.Series(test_Y[0], index=test.index)
+        test_Y_series_date = pd.Series(test_Y, index=test.index)
         yhat_series_date = pd.Series(denorm_yhat[0], index=test.index)
 
         return model_path, test_Y_series_date, yhat_series_date, pred_conf
 
-    def prophet_train_predict(self, train, test,  identifier, cols, target_col, in_size, out_size, keep_only, architecture, save_path=None):
+    def prophet_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(cols)
@@ -397,24 +399,28 @@ class ModelTraining:
         )
 
         train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train), index=train.index, columns=cols)
-        #todo: ver se precisa preprocessar o conjunto de teste
         test_pp = pd.DataFrame(preprocess_pipeline.transform(test), index=test.index,  columns=cols)
 
         # Prepare data for Prophet
         prophet_data = train_pp.reset_index().rename(columns={'dt': 'ds', cols[0]: 'y'})
         prophet_data['ds'] = pd.to_datetime(prophet_data['ds']).dt.tz_localize(None)
-        exog = train_pp.iloc[:, 1:]
+        exog_train = train_pp.iloc[:, 1:]
+        exog_test = test_pp.iloc[:, 1:]
+
         #exog = exog if len(exog.columns) else None
         model = Prophet()
 
-        if len(exog.columns) > 0:
-            for col in exog.columns:
+        if len(exog_train.columns) > 0:
+            for col in exog_train.columns:
                 model.add_regressor(col)
 
         model.fit(prophet_data)
 
         # Forecasting
-        future = model.make_future_dataframe(periods=len(test), freq='W')
+        future = model.make_future_dataframe(periods=len(test), freq='W', include_history=False)
+        if len(exog_test.columns) > 0:
+            future = pd.concat([future, exog_test.reset_index(drop=True)[cols[1:]]], axis="columns")
+
         forecast = model.predict(future)
 
         # Extract forecasted values
@@ -437,7 +443,28 @@ class ModelTraining:
 
     def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
 
-        #separação dos dados
+        if len(cols) > 1:
+            exog_cols = cols[1:]
+
+            for col in exog_cols:
+                data[col] = data[col].shift(out_size)
+                data = data[out_size:]
+
+        if architecture == 'simple_lstm_v0' or architecture == 'dia_lstm_v0':
+            self.run_crossv_lstm(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
+        elif architecture == 'sarimax':
+            self.run_crossv_sarimax(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
+        elif architecture == 'prophet':
+            self.run_crossv_prophet(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
+
+
+
+
+
+    def run_crossv_lstm(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
+                   start_offset=None, end_offset=None, train_valid_test: tuple = None):
+
+        # separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
         pred_list = []
         ref_list = []
@@ -445,8 +472,9 @@ class ModelTraining:
 
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
-            #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-            model_path, test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
+            # cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+            model_path, test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size,
+                                                               keep_only, architecture, save_path)
 
             pred_list_local = [str(yhat.index[0])]
             pred_list_local.extend(yhat.values)
@@ -465,7 +493,7 @@ class ModelTraining:
         pred_df.set_index('dt', inplace=True)
         ref_df.set_index('dt', inplace=True)
 
-        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
+        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra=models)
 
     def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         #separação dos dados
@@ -473,13 +501,12 @@ class ModelTraining:
         pred_list = []
         ref_list = []
         models = []
-        target_col = 'Alface Crespa - Roça'
 
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
             #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
 
-            model_path, test_Y, yhat, pred_conf = self.sarimax_train_predict(cv_train, cv_test, i_split, cols, target_col, in_size, out_size, keep_only, architecture, save_path)
+            model_path, test_Y, yhat, pred_conf = self.sarimax_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
             pred_list_local = [str(yhat.index[0])]
             pred_list_local.extend(yhat.values)
             pred_list.append(pred_list_local)
@@ -506,13 +533,12 @@ class ModelTraining:
         ref_list = []
         models = []
 
-        target_col = 'Alface Crespa - Roça'
 
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
             #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
 
-            model_path, test_Y, yhat = self.prophet_train_predict(cv_train, cv_test, i_split, cols, target_col, in_size, out_size, keep_only, architecture, save_path)
+            model_path, test_Y, yhat = self.prophet_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
 
             pred_list_local = [str(yhat.index[0])]
             pred_list_local.extend(yhat.values)
