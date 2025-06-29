@@ -441,7 +441,7 @@ class ModelTraining:
 
         return model_path, test_Y_series_date, yhat_series_date
 
-    def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+    def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path = None):
 
         if len(cols) > 1:
             exog_cols = cols[1:]
@@ -450,19 +450,18 @@ class ModelTraining:
                 data[col] = data[col].shift(out_size)
                 data = data[out_size:]
 
+        if results_path is None:
+            results_path = f"pred_ref_{architecture}_{model_id}"
+
         if architecture == 'simple_lstm_v0' or architecture == 'dia_lstm_v0':
-            self.run_crossv_lstm(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
+            self.run_crossv_lstm(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test, results_path)
         elif architecture == 'sarimax':
-            self.run_crossv_sarimax(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
+            self.run_crossv_sarimax(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test,results_path)
         elif architecture == 'prophet':
-            self.run_crossv_prophet(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test)
-
-
-
-
+            self.run_crossv_prophet(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test, results_path)
 
     def run_crossv_lstm(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
-                   start_offset=None, end_offset=None, train_valid_test: tuple = None):
+                   start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
 
         # separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
@@ -493,9 +492,9 @@ class ModelTraining:
         pred_df.set_index('dt', inplace=True)
         ref_df.set_index('dt', inplace=True)
 
-        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra=models)
+        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra=models)
 
-    def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+    def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
         #separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
         pred_list = []
@@ -524,9 +523,9 @@ class ModelTraining:
         pred_df.set_index('dt', inplace=True)
         ref_df.set_index('dt', inplace=True)
 
-        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
+        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra= models)
 
-    def run_crossv_prophet(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
+    def run_crossv_prophet(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
         #separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
         pred_list = []
@@ -557,4 +556,4 @@ class ModelTraining:
         pred_df.set_index('dt', inplace=True)
         ref_df.set_index('dt', inplace=True)
 
-        self.save_pred_ref(f"pred_ref", pred_df, ref_df, model_id, extra= models)
+        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra= models)

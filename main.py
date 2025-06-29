@@ -47,6 +47,9 @@ arg_parser.add_argument('-columns', '-c',
 arg_parser.add_argument('-save_path', '-sp',
                         type=str,
                         help='path to save the model')
+arg_parser.add_argument('-results-path', '-rp',
+                        type=str,
+                        help='path to save the results')
 arg_parser.add_argument('-experiment_group', '-eg',
                         type=str,
                         help='name of the experiment group')
@@ -75,6 +78,7 @@ model_name = None
 experiment_group = None
 start_offset = None
 end_offset = None
+results_path = None
 
 if args.config_file:
     with open(args.config_file, 'r') as f:
@@ -91,6 +95,7 @@ if args.config_file:
         start_offset = config.get('start_offset')
         end_offset = config.get('end_offset')
         train_valid_test = config.get('train_valid_test')
+        results_path = config.get('results_path')
 
 columns = args.columns.split(';') if args.columns else columns
 in_size = args.in_size if args.in_size else in_size
@@ -105,6 +110,7 @@ experiment_group = args.experiment_group if args.experiment_group else experimen
 start_offset = args.start_offset if args.start_offset else start_offset
 end_offset = args.end_offset if args.end_offset else end_offset
 train_valid_test = tuple(args.train_valid_test) if args.train_valid_test else train_valid_test
+results_path = args.results_path if args.results_path else f"res_{args.config_file}"
 
 df = pd.read_csv(input_file, index_col=0)
 model = ModelTraining()
@@ -133,7 +139,8 @@ model.run_crossv(
     model_id=model_id,
     start_offset=start_offset,
     end_offset=end_offset,
-    train_valid_test=train_valid_test)
+    train_valid_test=train_valid_test,
+    results_path = results_path)
 
 # rmse = model.rmse
 # mae = model.mae
