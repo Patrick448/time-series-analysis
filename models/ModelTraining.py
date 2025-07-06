@@ -54,12 +54,12 @@ class ModelTraining:
         if extra is not None:
             pred_df['extra'] = extra
 
-        pred_df.to_csv(f'{ref_pred_path}/pred_{model_id}.csv')
-        ref_df.to_csv(f'{ref_pred_path}/ref_{model_id}.csv')
+        pred_df.to_csv(f'{ref_pred_path}/pred.csv')
+        ref_df.to_csv(f'{ref_pred_path}/ref.csv')
 
     def _create_simple_lstm(self, input_shape: tuple, output_shape: int) -> Model:
         input = Input(input_shape)
-        lstm = LSTM(200, return_sequences=True, activation="tanh")(input)
+        lstm = LSTM(200, return_sequences=True, activation="relu")(input)
         dropout = Dropout(0.2)(lstm)
         flatten = Flatten()(dropout)
         dense1 = Dense(10*output_shape)(flatten)
@@ -89,7 +89,7 @@ class ModelTraining:
 
     def run(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None):
         train, valid, test = train_test_validation_split(data, 0.7, 0.2, train_valid_test=train_valid_test)
-        train_index, valid_index, test_index = train.index, valid.index, test.index
+        #train_index, valid_index, test_index = train.index, valid.index, test.index
         keep_only_size = 1 if keep_only is not None else out_size
         input_columns = cols
         n_vars = len(input_columns)
@@ -301,7 +301,7 @@ class ModelTraining:
                 save_best_only=True)
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=200,
+        history = model.fit(train_X, train_Y, epochs=100, batch_size=20,
                             # validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False,  # use_multiprocessing=True,
                             validation_split=0.1,
@@ -328,7 +328,7 @@ class ModelTraining:
         test_Y_series_date = pd.Series(denorm_test_Y[0], index=test.index[-out_size:])
         yhat_series_date = pd.Series(denorm_yhat[0], index=test.index[-out_size:])
 
-        return model_path, test_Y_series_date, yhat_series_date
+        return test_Y_series_date, yhat_series_date
 
     #todo: conferir normalização e ver se dá pra padronizar mais coisas entre os difentes algoritmos
     def sarimax_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
@@ -355,7 +355,7 @@ class ModelTraining:
         exog_train = train_pp.iloc[:, 1:]
         exog_train = exog_train if len(exog_train.columns) else None
         model = SARIMAX(train_pp[cols[0]], exog=exog_train,
-                        order=(1, 0, 1), seasonal_order=(0, 0, 0, 26), trend='ct')
+                        order=(1, 0, 1), seasonal_order=(0, 0, 0, 52), trend='ct')
         # fit model
         model_fit = model.fit(disp=False)
 
@@ -380,7 +380,7 @@ class ModelTraining:
         test_Y_series_date = pd.Series(test_Y, index=test.index)
         yhat_series_date = pd.Series(denorm_yhat[0], index=test.index)
 
-        return model_path, test_Y_series_date, yhat_series_date, pred_conf
+        return test_Y_series_date, yhat_series_date
 
     def prophet_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
 
@@ -429,8 +429,6 @@ class ModelTraining:
         #todo: não denormalizei por que peguei direto do input, mas dar uma olhada nisso
         test_Y = test[cols[0]]
         yhat = forecast_values['yhat'].values
-        #pred_conf = prediction.conf_int()
-        model_path = ""
 
         denorm_yhat = np.copy([yhat])
         for i, col in enumerate(denorm_yhat.T):
@@ -439,7 +437,7 @@ class ModelTraining:
         test_Y_series_date = pd.Series(test_Y, index=test.index)
         yhat_series_date = pd.Series(denorm_yhat[0], index=test.index)
 
-        return model_path, test_Y_series_date, yhat_series_date
+        return test_Y_series_date, yhat_series_date
 
     def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path = None):
 
@@ -452,27 +450,24 @@ class ModelTraining:
 
         if results_path is None:
             results_path = f"pred_ref_{architecture}_{model_id}"
-
+        run_model = None
         if architecture == 'simple_lstm_v0' or architecture == 'dia_lstm_v0':
-            self.run_crossv_lstm(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test, results_path)
+            run_model = self.lstm_train_predict
         elif architecture == 'sarimax':
-            self.run_crossv_sarimax(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test,results_path)
+            run_model = self.sarimax_train_predict
         elif architecture == 'prophet':
-            self.run_crossv_prophet(data, cols, in_size, out_size, keep_only, architecture, save_path, model_id, start_offset, end_offset, train_valid_test, results_path)
-
-    def run_crossv_lstm(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
-                   start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
+            run_model = self.prophet_train_predict
 
         # separação dos dados
         tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
         pred_list = []
         ref_list = []
-        models = []
+        #models = []
 
         for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
             cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
             # cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-            model_path, test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size,
+            test_Y, yhat = run_model(cv_train, cv_test, i_split, cols, in_size, out_size,
                                                                keep_only, architecture, save_path)
 
             pred_list_local = [str(yhat.index[0])]
@@ -483,8 +478,6 @@ class ModelTraining:
             ref_list_local.extend(test_Y.values)
             ref_list.append(ref_list_local)
 
-            models.append(model_path)
-
         pred_df = pd.DataFrame(pred_list)
         pred_df.rename(columns={0: 'dt'}, inplace=True)
         ref_df = pd.DataFrame(ref_list)
@@ -492,68 +485,94 @@ class ModelTraining:
         pred_df.set_index('dt', inplace=True)
         ref_df.set_index('dt', inplace=True)
 
-        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra=models)
+        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
 
-    def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
-        #separação dos dados
-        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
-        pred_list = []
-        ref_list = []
-        models = []
-
-        for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
-            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
-            #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-
-            model_path, test_Y, yhat, pred_conf = self.sarimax_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
-            pred_list_local = [str(yhat.index[0])]
-            pred_list_local.extend(yhat.values)
-            pred_list.append(pred_list_local)
-
-            ref_list_local = [str(test_Y.index[0])]
-            ref_list_local.extend(test_Y.values)
-            ref_list.append(ref_list_local)
-
-            models.append(model_path)
-
-        pred_df = pd.DataFrame(pred_list)
-        pred_df.rename(columns={0: 'dt'}, inplace=True)
-        ref_df = pd.DataFrame(ref_list)
-        ref_df.rename(columns={0: 'dt'}, inplace=True)
-        pred_df.set_index('dt', inplace=True)
-        ref_df.set_index('dt', inplace=True)
-
-        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra= models)
-
-    def run_crossv_prophet(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
-        #separação dos dados
-        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
-        pred_list = []
-        ref_list = []
-        models = []
-
-
-        for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
-            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
-            #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-
-            model_path, test_Y, yhat = self.prophet_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
-
-            pred_list_local = [str(yhat.index[0])]
-            pred_list_local.extend(yhat.values)
-            pred_list.append(pred_list_local)
-
-            ref_list_local = [str(test_Y.index[0])]
-            ref_list_local.extend(test_Y.values)
-            ref_list.append(ref_list_local)
-
-            models.append(model_path)
-
-        pred_df = pd.DataFrame(pred_list)
-        pred_df.rename(columns={0: 'dt'}, inplace=True)
-        ref_df = pd.DataFrame(ref_list)
-        ref_df.rename(columns={0: 'dt'}, inplace=True)
-        pred_df.set_index('dt', inplace=True)
-        ref_df.set_index('dt', inplace=True)
-
-        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id, extra= models)
+    # def run_crossv_lstm(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
+    #                start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
+    #
+    #     # separação dos dados
+    #     tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+    #     pred_list = []
+    #     ref_list = []
+    #     #models = []
+    #
+    #     for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+    #         cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+    #         # cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+    #         test_Y, yhat = self.lstm_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size,
+    #                                                            keep_only, architecture, save_path)
+    #
+    #         pred_list_local = [str(yhat.index[0])]
+    #         pred_list_local.extend(yhat.values)
+    #         pred_list.append(pred_list_local)
+    #
+    #         ref_list_local = [str(test_Y.index[0])]
+    #         ref_list_local.extend(test_Y.values)
+    #         ref_list.append(ref_list_local)
+    #
+    #     pred_df = pd.DataFrame(pred_list)
+    #     pred_df.rename(columns={0: 'dt'}, inplace=True)
+    #     ref_df = pd.DataFrame(ref_list)
+    #     ref_df.rename(columns={0: 'dt'}, inplace=True)
+    #     pred_df.set_index('dt', inplace=True)
+    #     ref_df.set_index('dt', inplace=True)
+    #
+    #     self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
+    #
+    # def run_crossv_sarimax(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
+    #     #separação dos dados
+    #     tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+    #     pred_list = []
+    #     ref_list = []
+    #
+    #     for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+    #         cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+    #         #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+    #
+    #         test_Y, yhat = self.sarimax_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
+    #         pred_list_local = [str(yhat.index[0])]
+    #         pred_list_local.extend(yhat.values)
+    #         pred_list.append(pred_list_local)
+    #
+    #         ref_list_local = [str(test_Y.index[0])]
+    #         ref_list_local.extend(test_Y.values)
+    #         ref_list.append(ref_list_local)
+    #
+    #
+    #     pred_df = pd.DataFrame(pred_list)
+    #     pred_df.rename(columns={0: 'dt'}, inplace=True)
+    #     ref_df = pd.DataFrame(ref_list)
+    #     ref_df.rename(columns={0: 'dt'}, inplace=True)
+    #     pred_df.set_index('dt', inplace=True)
+    #     ref_df.set_index('dt', inplace=True)
+    #
+    #     self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
+    #
+    # def run_crossv_prophet(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):
+    #     #separação dos dados
+    #     tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+    #     pred_list = []
+    #     ref_list = []
+    #
+    #     for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+    #         cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+    #         #cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+    #
+    #         test_Y, yhat = self.prophet_train_predict(cv_train, cv_test, i_split, cols, in_size, out_size, keep_only, architecture, save_path)
+    #
+    #         pred_list_local = [str(yhat.index[0])]
+    #         pred_list_local.extend(yhat.values)
+    #         pred_list.append(pred_list_local)
+    #
+    #         ref_list_local = [str(test_Y.index[0])]
+    #         ref_list_local.extend(test_Y.values)
+    #         ref_list.append(ref_list_local)
+    #
+    #     pred_df = pd.DataFrame(pred_list)
+    #     pred_df.rename(columns={0: 'dt'}, inplace=True)
+    #     ref_df = pd.DataFrame(ref_list)
+    #     ref_df.rename(columns={0: 'dt'}, inplace=True)
+    #     pred_df.set_index('dt', inplace=True)
+    #     ref_df.set_index('dt', inplace=True)
+    #
+    #     self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
