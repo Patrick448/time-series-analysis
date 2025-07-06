@@ -12,6 +12,7 @@ from keras.layers import Dense
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Attention, GRU, Flatten, Input, Permute, Concatenate
 from keras.layers import Dropout
+from statsmodels.tsa.arima import params
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from custom_transforms.transforms import *
@@ -39,37 +40,33 @@ class ModelTraining:
         self.r2_by_timestep = None
         self.history = None
 
-    def save_pred_ref(self, ref_pred_path, pred, ref,  model_id, dt=None, extra=None):
-        try:
-            os.mkdir(ref_pred_path)
-        except:
-            pass
-        pred_df =pd.DataFrame(pred)
-        ref_df =pd.DataFrame(ref)
 
-        if dt is not None:
-            pred_df.index = dt
-            ref_df.index= dt
 
-        if extra is not None:
-            pred_df['extra'] = extra
+    def _create_simple_lstm(self, input_shape: tuple, output_shape: int, model_params = None) -> Model:
+        units = model_params['units']
+        dropout = model_params['dropout']
+        activation = model_params['activation']
+        loss = model_params['loss']
+        optimizer = model_params['optimizer']
 
-        pred_df.to_csv(f'{ref_pred_path}/pred.csv')
-        ref_df.to_csv(f'{ref_pred_path}/ref.csv')
-
-    def _create_simple_lstm(self, input_shape: tuple, output_shape: int) -> Model:
         input = Input(input_shape)
-        lstm = LSTM(200, return_sequences=True, activation="relu")(input)
-        dropout = Dropout(0.2)(lstm)
+        lstm = LSTM(units, return_sequences=True, activation=activation)(input)
+        dropout = Dropout(dropout)(lstm)
         flatten = Flatten()(dropout)
         dense1 = Dense(10*output_shape)(flatten)
         output = Dense(output_shape)(dense1)
         model = Model(inputs=input, outputs=output)
-        model.compile(loss='mean_squared_error', optimizer='adam')
+        model.compile(loss=loss, optimizer=optimizer)
 
         return model
 
-    def _create_dia_lstm(self, input_shape: tuple, output_shape: int) -> Model:
+    def _create_dia_lstm(self, input_shape: tuple, output_shape: int, model_params = None) -> Model:
+        units = model_params['units']
+        dropout = model_params['dropout']
+        activation = model_params['activation']
+        loss = model_params['loss']
+        optimizer = model_params['optimizer']
+
         input = Input(input_shape)
         permuted_input = Permute((2, 1))(input)
         temporal_attention = Attention()(permuted_input)
@@ -82,7 +79,7 @@ class ModelTraining:
         dense1 = Dense(10*output_shape)(flatten)
         output = Dense(output_shape)(dense1)
         model = Model(inputs=input, outputs=output)
-        model.compile(loss='mean_squared_error', optimizer='adam')
+        model.compile(loss=loss, optimizer=optimizer)
 
         print(model.summary())
         return model
@@ -250,10 +247,13 @@ class ModelTraining:
 
         return preprocess_pipeline
 
-    def lstm_train_predict(self, train, test, identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
+    def lstm_train_predict(self, train, test, identifier, cols, in_size, out_size, keep_only, architecture, save_path=None, model_params=None):
 
         # daqui pra frente são coisas especificas do modelo
         # todo: talvez o scaler possa ser passado para a etapa anterior
+        epochs = model_params['epochs']
+        batch_size = model_params['batch_size']
+        validation_split = model_params['validation_split']
 
         n_vars = len(cols)
         keep_only_size = 1 if keep_only is not None else out_size
@@ -286,9 +286,9 @@ class ModelTraining:
         test_X = test_X.reshape((test_X.shape[0], 1, test_X.shape[1]))
 
         if architecture == 'simple_lstm_v0':
-            model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
+            model = self._create_simple_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size, model_params=model_params)
         elif architecture == 'dia_lstm_v0':
-            model = self._create_dia_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size)
+            model = self._create_dia_lstm((train_X.shape[1], train_X.shape[2]), keep_only_size, model_params=model_params)
         else:
             raise ValueError(f'Architecture {architecture} not found')
 
@@ -301,10 +301,10 @@ class ModelTraining:
                 save_best_only=True)
 
         # fit network
-        history = model.fit(train_X, train_Y, epochs=100, batch_size=20,
+        history = model.fit(train_X, train_Y, epochs=epochs, batch_size=batch_size,
                             # validation_data=(validation_X, validation_Y),
                             verbose=2, shuffle=False,  # use_multiprocessing=True,
-                            validation_split=0.1,
+                            validation_split=validation_split,
                             callbacks=[EarlyStopping(patience=10, monitor='val_loss'),
                                        model_checkpoint_callback])
         self.history = history.history
@@ -331,7 +331,7 @@ class ModelTraining:
         return test_Y_series_date, yhat_series_date
 
     #todo: conferir normalização e ver se dá pra padronizar mais coisas entre os difentes algoritmos
-    def sarimax_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
+    def sarimax_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None, model_params=None):
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(cols)
@@ -350,12 +350,19 @@ class ModelTraining:
             ]
         )
 
+        if(model_params is None or model_params["pdq"] is None or model_params["PDQM"] is None):
+            raise Exception("p,d,q,P,D,Q,M parameters not defined")
+
+        p,d,q = model_params["pdq"][0], model_params["pdq"][1], model_params["pdq"][2]
+        P,D,Q,M = model_params["PDQM"][0], model_params["PDQM"][1],model_params["PDQM"][2],model_params["PDQM"][3]
+        trend = model_params["trend"]
+
         train_pp = pd.DataFrame(preprocess_pipeline.fit_transform(train), index=train.index, columns=cols)
         test_pp = pd.DataFrame(preprocess_pipeline.transform(test), index=test.index, columns=cols)
         exog_train = train_pp.iloc[:, 1:]
         exog_train = exog_train if len(exog_train.columns) else None
         model = SARIMAX(train_pp[cols[0]], exog=exog_train,
-                        order=(1, 0, 1), seasonal_order=(0, 0, 0, 52), trend='ct')
+                        order=(p, d, q), seasonal_order=(P, D, Q, M), trend=trend)
         # fit model
         model_fit = model.fit(disp=False)
 
@@ -382,7 +389,7 @@ class ModelTraining:
 
         return test_Y_series_date, yhat_series_date
 
-    def prophet_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None):
+    def prophet_train_predict(self, train, test,  identifier, cols, in_size, out_size, keep_only, architecture, save_path=None, model_params=None):
 
         scaler = MinMaxScaler(feature_range=(0, 1))
         column_selector = ColumnSelector(cols)
@@ -439,53 +446,6 @@ class ModelTraining:
 
         return test_Y_series_date, yhat_series_date
 
-    def run_crossv(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None, start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path = None):
-
-        if len(cols) > 1:
-            exog_cols = cols[1:]
-
-            for col in exog_cols:
-                data[col] = data[col].shift(out_size)
-                data = data[out_size:]
-
-        if results_path is None:
-            results_path = f"pred_ref_{architecture}_{model_id}"
-        run_model = None
-        if architecture == 'simple_lstm_v0' or architecture == 'dia_lstm_v0':
-            run_model = self.lstm_train_predict
-        elif architecture == 'sarimax':
-            run_model = self.sarimax_train_predict
-        elif architecture == 'prophet':
-            run_model = self.prophet_train_predict
-
-        # separação dos dados
-        tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
-        pred_list = []
-        ref_list = []
-        #models = []
-
-        for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
-            cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
-            # cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
-            test_Y, yhat = run_model(cv_train, cv_test, i_split, cols, in_size, out_size,
-                                                               keep_only, architecture, save_path)
-
-            pred_list_local = [str(yhat.index[0])]
-            pred_list_local.extend(yhat.values)
-            pred_list.append(pred_list_local)
-
-            ref_list_local = [str(test_Y.index[0])]
-            ref_list_local.extend(test_Y.values)
-            ref_list.append(ref_list_local)
-
-        pred_df = pd.DataFrame(pred_list)
-        pred_df.rename(columns={0: 'dt'}, inplace=True)
-        ref_df = pd.DataFrame(ref_list)
-        ref_df.rename(columns={0: 'dt'}, inplace=True)
-        pred_df.set_index('dt', inplace=True)
-        ref_df.set_index('dt', inplace=True)
-
-        self.save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
 
     # def run_crossv_lstm(self, data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
     #                start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None):

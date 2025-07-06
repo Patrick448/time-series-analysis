@@ -1,8 +1,10 @@
 import json
 import os
+import shutil
 from os.path import abspath
 
 import numpy as np
+from sklearn.model_selection import TimeSeriesSplit
 
 from models.ModelTraining import ModelTraining
 import pandas as pd
@@ -12,57 +14,14 @@ import argparse
 arg_parser = argparse.ArgumentParser(description='Run LSTM model experiment')
 # Add the arguments
 
-arg_parser.add_argument('-input-file', '-if',
-                        type=str,
-                        help='path to the file containing the input data')
-
 arg_parser.add_argument('-config-file', '-cf',
                         type=str,
                         help='path to the JSON config file')
 
-arg_parser.add_argument('-model', '-m',
-                        type=str,
-                        help='name of the model to run')
 
-arg_parser.add_argument('-in_size', '-is',
-                        type=int,
-                        help='input size')
-
-arg_parser.add_argument('-out_size', '-os',
-                        type=int,
-                        help='output size')
-arg_parser.add_argument('-keep_only', '-ko',
-                        type=int,
-                        help='number of timesteps to keep')
-arg_parser.add_argument('-result_file', '-rf',
-                        type=str,
-                        help='path to save the results')
 arg_parser.add_argument('-output-header', '-oh',
                         action='store_true',
                         help='print the header to the output file with the results')
-arg_parser.add_argument('-columns', '-c',
-                        type=str,
-                        help='columns to use in the model separated by semicolon. Ex: "column1;column2"')
-
-arg_parser.add_argument('-save_path', '-sp',
-                        type=str,
-                        help='path to save the model')
-arg_parser.add_argument('-results-path', '-rp',
-                        type=str,
-                        help='path to save the results')
-arg_parser.add_argument('-experiment_group', '-eg',
-                        type=str,
-                        help='name of the experiment group')
-arg_parser.add_argument('-start_offset', '-so',
-                        type=int,
-                        help='start offset')
-arg_parser.add_argument('-end_offset', '-eo',
-                        type=int,
-                        help='end offset')
-
-arg_parser.add_argument('-train_valid_test', '-tvt',
-                        type=tuple,
-                        help='train, validation and test set split')
 
 args = arg_parser.parse_args()
 
@@ -79,7 +38,7 @@ experiment_group = None
 start_offset = None
 end_offset = None
 results_path = None
-
+model_params = None
 if args.config_file:
     with open(args.config_file, 'r') as f:
         config = json.load(f)
@@ -96,24 +55,12 @@ if args.config_file:
         end_offset = config.get('end_offset')
         train_valid_test = config.get('train_valid_test')
         results_path = config.get('results_path')
+        model_params = config.get('model_params')
 
-columns = args.columns.split(';') if args.columns else columns
-in_size = args.in_size if args.in_size else in_size
-out_size = args.out_size if args.out_size else out_size
-keep_only = args.keep_only if args.keep_only else keep_only
-result_file = args.result_file if args.result_file else result_file
-output_header = args.output_header if args.output_header else output_header
-input_file = args.input_file if args.input_file else input_file
-save_path = args.save_path if args.save_path else save_path
-model_name = args.model if args.model else model_name
-experiment_group = args.experiment_group if args.experiment_group else experiment_group
-start_offset = args.start_offset if args.start_offset else start_offset
-end_offset = args.end_offset if args.end_offset else end_offset
-train_valid_test = tuple(args.train_valid_test) if args.train_valid_test else train_valid_test
-results_path = args.results_path if args.results_path else f"res_{args.config_file}"
+results_path = f"res_{args.config_file}"
 
 df = pd.read_csv(input_file, index_col=0)
-model = ModelTraining()
+
 
 model_id = None
 if save_path is not None:
@@ -128,7 +75,79 @@ if save_path is not None:
     model_path = f'{save_path}/model_{model_name}.{model_id}'
     #os.mkdir(model_path)
 
-model.run_crossv(
+def save_pred_ref(ref_pred_path, pred, ref,  model_id, dt=None, extra=None):
+
+    pred_df =pd.DataFrame(pred)
+    ref_df =pd.DataFrame(ref)
+
+    if dt is not None:
+        pred_df.index = dt
+        ref_df.index= dt
+
+    if extra is not None:
+        pred_df['extra'] = extra
+
+    pred_df.to_csv(f'{ref_pred_path}/pred.csv')
+    ref_df.to_csv(f'{ref_pred_path}/ref.csv')
+
+def run_crossv(data, cols, in_size, out_size, keep_only, architecture, save_path=None, model_id=None,
+               start_offset=None, end_offset=None, train_valid_test: tuple = None, results_path=None,
+               model_params=None):
+    model = ModelTraining()
+    if len(cols) > 1:
+        exog_cols = cols[1:]
+
+        for col in exog_cols:
+            data[col] = data[col].shift(out_size)
+            data = data[out_size:]
+
+    if results_path is None:
+        results_path = f"pred_ref_{architecture}_{model_id}"
+    run_model = None
+    if architecture == 'simple_lstm_v0' or architecture == 'dia_lstm_v0':
+        run_model = model.lstm_train_predict
+    elif architecture == 'sarimax':
+        run_model = model.sarimax_train_predict
+    elif architecture == 'prophet':
+        run_model = model.prophet_train_predict
+
+    # separação dos dados
+    tscv_split = TimeSeriesSplit(test_size=out_size, n_splits=10)
+    pred_list = []
+    ref_list = []
+    # models = []
+
+    for i_split, (train_index, test_index) in enumerate(tscv_split.split(data)):
+        cv_train, cv_test = data.iloc[train_index], data.iloc[test_index]
+        # cv_test = pd.concat([cv_train.tail(in_size), cv_test], axis="rows")
+        test_Y, yhat = run_model(cv_train, cv_test, i_split, cols, in_size, out_size,
+                                 keep_only, architecture, save_path, model_params=model_params)
+
+        pred_list_local = [str(yhat.index[0])]
+        pred_list_local.extend(yhat.values)
+        pred_list.append(pred_list_local)
+
+        ref_list_local = [str(test_Y.index[0])]
+        ref_list_local.extend(test_Y.values)
+        ref_list.append(ref_list_local)
+
+    pred_df = pd.DataFrame(pred_list)
+    pred_df.rename(columns={0: 'dt'}, inplace=True)
+    ref_df = pd.DataFrame(ref_list)
+    ref_df.rename(columns={0: 'dt'}, inplace=True)
+    pred_df.set_index('dt', inplace=True)
+    ref_df.set_index('dt', inplace=True)
+
+    save_pred_ref(f"{results_path}", pred_df, ref_df, model_id)
+
+try:
+    os.mkdir(results_path)
+    shutil.copyfile(args.config_file, results_path + '/config.json')
+except Exception as e:
+    raise Exception (f"It was not possible to create the results directory.Exception: {e}")
+    exit(1)
+
+run_crossv(
     df,
     columns,
     in_size,
@@ -140,50 +159,5 @@ model.run_crossv(
     start_offset=start_offset,
     end_offset=end_offset,
     train_valid_test=train_valid_test,
-    results_path = results_path)
-
-# rmse = model.rmse
-# mae = model.mae
-# mse = model.mse
-# mape = model.mape
-# r2 = model.r2
-#
-# rmses = model.rmse_by_timestep['RMSE'].tolist()
-# maes = model.mae_by_timestep['MAE'].tolist()
-# mses = model.mse_by_timestep['MSE'].tolist()
-# mapes = model.mape_by_timestep['MAPE'].tolist()
-# r2s = model.r2_by_timestep['R2'].tolist()
-#
-# rmse_by_timestep = "\"" + ",".join(map(str, rmses)) + "\""
-# mae_by_timestep = "\"" + ",".join(map(str, maes)) + "\""
-# mse_by_timestep = "\"" + ",".join(map(str, mses)) + "\""
-# mape_by_timestep = "\"" + ",".join(map(str, mapes)) + "\""
-# r2_by_timestep = "\"" + ",".join(map(str, r2s)) + "\""
-#
-# loss = '\"'+','.join(map(str, model.history['loss'])) + '\"'
-# val_loss = '\"'+','.join(map(str, model.history['val_loss'])) + '\"'
-# columns_str = "\"" + ','.join(columns) + "\""
-#
-# csv_columns = ['experiment_group', 'model','model_id', 'save_path', 'in_size', 'out_size', 'keep_only',
-#                'RMSE', 'MAE', 'MSE', 'MAPE', 'R2',
-#                'RMSE_by_timestep', 'MAE_by_timestep', 'MSE_by_timestep', 'MAPE_by_timestep', 'R2_by_timestep',
-#                'loss', 'val_loss', 'columns']
-#
-# csv_values = [experiment_group, model_name, model_id, abspath(model_path), in_size, out_size, keep_only,
-#               rmse, mae, mse, mape, r2,
-#               rmse_by_timestep, mae_by_timestep, mse_by_timestep, mape_by_timestep, r2_by_timestep,
-#               loss, val_loss, columns_str]
-#
-#
-#
-# # Save the results
-# csv_string = ""
-# if args.output_header:
-#     csv_string = ",".join(csv_columns) + "\n"
-# csv_string += ",".join(map(str, csv_values)) + "\n"
-#
-# if result_file:
-#     with open(result_file, 'a') as f:
-#         f.write(csv_string)
-
-# print(csv_string)
+    results_path = results_path,
+    model_params=model_params)

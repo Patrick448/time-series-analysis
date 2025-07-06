@@ -1,0 +1,20 @@
+Tried out SARIMAX(0, 1, 0)x(0, 1, 0, 56) - AIC:-410.95
+Tried out SARIMAX(0, 1, 0)x(0, 1, 1, 56) - AIC:-505.44
+Tried out SARIMAX(0, 1, 0)x(1, 1, 0, 56) - AIC:-473.36
+Tried out SARIMAX(0, 1, 0)x(1, 1, 1, 56) - AIC:-504.68
+Tried out SARIMAX(0, 1, 1)x(0, 1, 0, 56) - AIC:-440.52
+Tried out SARIMAX(0, 1, 1)x(0, 1, 1, 56) - AIC:-521.13
+Tried out SARIMAX(0, 1, 1)x(1, 1, 0, 56) - AIC:-496.3
+Tried out SARIMAX(0, 1, 1)x(1, 1, 1, 56) - AIC:-519.83
+
+
+/usr/local/lib/python3.11/dist-packages/statsmodels/base/model.py:607: ConvergenceWarning: Maximum Likelihood optimization failed to converge. Check mle_retvals
+  warnings.warn("Maximum Likelihood optimization failed to "
+Tried out SARIMAX(1, 1, 0)x(0, 1, 0, 56) - AIC:-439.66
+Tried out SARIMAX(1, 1, 0)x(0, 1, 1, 56) - AIC:-520.46
+Tried out SARIMAX(1, 1, 0)x(1, 1, 0, 56) - AIC:-494.11
+Tried out SARIMAX(1, 1, 0)x(1, 1, 1, 56) - AIC:-519.06
+Tried out SARIMAX(1, 1, 1)x(0, 1, 0, 56) - AIC:-438.99
+Tried out SARIMAX(1, 1, 1)x(0, 1, 1, 56) - AIC:-519.17
+Tried out SARIMAX(1, 1, 1)x(1, 1, 0, 56) - AIC:-494.33
+Tried out SARIMAX(1, 1, 1)x(1, 1, 1, 56) - AIC:-517.84
