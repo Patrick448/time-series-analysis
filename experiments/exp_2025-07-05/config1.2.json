@@ -1,5 +1,5 @@
 {
-  "model": "dia_lstm_v0",
+  "model": "prophet",
   "input_file": "../../processed_data/price_weather_weekly_df-2016-2023.csv",
   "input_size": 52,
   "output_size": 8,
@@ -9,14 +9,9 @@
   "experiment_group": "4",
   "train_valid_test": [230, 72, 100],
   "columns": [
-    "Alface Crespa - Roça"
+    "Alface Crespa - Roça",
+    "TEMPERATURA ORVALHO MAX. NA HORA ANT. (AUT) (°C)"
 
-  ],
-  "model_params": {
-      "units": 200,
-      "dropout": 0.2,
-      "activation": "relu",
-      "optimizer": "adam",
-      "loss": "mean_squared_error"
-  }
+  ]
+
 }
