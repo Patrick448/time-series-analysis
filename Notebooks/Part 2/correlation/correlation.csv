@@ -1,0 +1,38 @@
+column,correlated_to,max_correlation
+"Alface Americana - Roça","Alface Crespa - Roça",0.8547361320620149
+"Alface Crespa - Roça","Alface Crespa - Roça",1.0
+"Alface Lisa - Roça","Alface Crespa - Roça",0.969711715898993
+"Alface Americana - Atacado","Alface Crespa - Roça",nan
+"Alface Crespa - Atacado","Alface Crespa - Roça",nan
+"PREC_HOR_max","Alface Crespa - Roça",0.18616517056764822
+"PREC_HOR_min","Alface Crespa - Roça",0.0943085842117933
+"PREC_HOR_sum","Alface Crespa - Roça",0.18368912944652466
+"PREC_HOR_mean","Alface Crespa - Roça",0.1835616407256718
+"PRES_MIN_ANT_max","Alface Crespa - Roça",0.35045096818626653
+"PRES_MIN_ANT_min","Alface Crespa - Roça",0.3270557075039954
+"PRES_MIN_ANT_sum","Alface Crespa - Roça",0.3412734310171778
+"PRES_MIN_ANT_mean","Alface Crespa - Roça",0.3412734310171778
+"RAD_GLOB_max","Alface Crespa - Roça",0.20486860687871988
+"RAD_GLOB_min","Alface Crespa - Roça",0.412456508773787
+"RAD_GLOB_sum","Alface Crespa - Roça",0.19555173913122972
+"RAD_GLOB_mean","Alface Crespa - Roça",0.19555173913122972
+"TEMP_AR_HOR_max","Alface Crespa - Roça",0.24058054159215322
+"TEMP_AR_HOR_min","Alface Crespa - Roça",0.3357416789979054
+"TEMP_AR_HOR_sum","Alface Crespa - Roça",0.309803675815038
+"TEMP_AR_HOR_mean","Alface Crespa - Roça",0.309803675815038
+"TEMP_ORV_max","Alface Crespa - Roça",0.35307697959577033
+"TEMP_ORV_min","Alface Crespa - Roça",0.3617022183154909
+"TEMP_ORV_sum","Alface Crespa - Roça",0.36963897576018134
+"TEMP_ORV_mean","Alface Crespa - Roça",0.36963897576018134
+"UMID_AR_HOR_max","Alface Crespa - Roça",0.21183544652605718
+"UMID_AR_HOR_min","Alface Crespa - Roça",0.13635580268335673
+"UMID_AR_HOR_sum","Alface Crespa - Roça",0.16848028323570544
+"UMID_AR_HOR_mean","Alface Crespa - Roça",0.16848028323570544
+"VENT_DIR_HOR_max","Alface Crespa - Roça",0.30168625631129276
+"VENT_DIR_HOR_min","Alface Crespa - Roça",0.27625068710397577
+"VENT_DIR_HOR_sum","Alface Crespa - Roça",0.25338461262800455
+"VENT_DIR_HOR_mean","Alface Crespa - Roça",0.25338461262800455
+"VENT_VEL_HOR_max","Alface Crespa - Roça",0.21019988478920662
+"VENT_VEL_HOR_min","Alface Crespa - Roça",0.22024390880925754
+"VENT_VEL_HOR_sum","Alface Crespa - Roça",0.28516402024682647
+"VENT_VEL_HOR_mean","Alface Crespa - Roça",0.28518223630268796
