@@ -1,0 +1,17 @@
+{
+  "model": "prophet",
+    "alias": "prophet-1",
+  "input_file": "/home/patrick/Desktop/Projects/time-series-analysis/Notebooks/Part 2/price_weather_df.v2.csv",
+  "input_size": 52,
+  "output_size": 8,
+  "keep_only": null,
+  "result_file": "result.csv",
+  "save_path": "../../saved_models",
+  "experiment_group": "4",
+  "train_valid_test": [230, 72, 100],
+  "columns": [
+    "Alface Crespa - Roça"
+
+  ]
+
+}

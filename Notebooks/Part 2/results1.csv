@@ -1,0 +1,13 @@
+id,alias,columns,MSE,R2,MAE,MAPE,RMSE
+res_lstm1.json,lstm1,[Alface Crespa - Roça],0.101717,-0.031651,0.248672,0.419899,0.318931
+res_lstm2.json,lstm2,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4]",0.088183,0.142844,0.235151,0.346744,0.296957
+res_lstm3.json,lstm3,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4]",0.090640,0.123719,0.229656,0.354366,0.301065
+res_lstm4.json,lstm4,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4, TEMP_AR_HOR_min_ra4]",0.084515,0.158896,0.214877,0.294579,0.290715
+res_prophet1.json,prophet-1,[Alface Crespa - Roça],0.094638,0.037823,0.254984,0.462285,0.307634
+res_prophet2.json,prophet-2,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4]",0.099841,-0.018476,0.259080,0.466856,0.315976
+res_prophet3.json,prophet-3,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4]",0.100833,-0.032514,0.259492,0.468930,0.317542
+res_prophet4.json,prophet-4,"[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4, TEMP_AR_HOR_min_ra4]",0.103686,-0.061305,0.265323,0.485268,0.322003
+res_sarimax.gs3.json,"sarimax(0, 1, 1)(0, 0, 0, 56)ct","[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4]",0.074643,0.103245,0.202535,0.341498,0.273208
+res_sarimax.gs4.json,"sarimax(0, 1, 1)(0, 0, 0, 56)ct","[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4, PRES_MIN_ANT_max_ra4, TEMP_AR_HOR_min_ra4]",0.075346,0.093082,0.203662,0.343753,0.274492
+res_sarimax.gs1.json,"sarimax(0, 1, 1)(0, 0, 0, 56)ct",[Alface Crespa - Roça],0.076496,0.077632,0.202870,0.339105,0.276579
+res_sarimax.gs2.json,"sarimax(0, 1, 1)(0, 0, 0, 56)ct","[Alface Crespa - Roça, VENT_VEL_HOR_mean_ra4]",0.077705,0.063273,0.203632,0.341617,0.278756
